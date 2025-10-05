@@ -1,0 +1,217 @@
+# 异常检测配置文件
+# Anomaly Detection Configuration File
+# 
+# 这个配置文件实现了您方案中的跨模态注意力融合异常检测系统
+# 核心特点：
+# 1. 冻结骨干网络权重，减少训练负担
+# 2. 跨模态注意力融合，增强特征表示
+# 3. 轻量级异常检测头，高效异常检测
+
+LOG_DIR: 'tensorboard_logs'
+TAG: 'anomaly_detection_cross_modal_attention'
+
+CML_PROJECT: 'muvo_anomaly'
+CML_TASK: 'anomaly_detection'
+CML_TYPE: 'training'
+CML_DATASET: 'carla_dataset'
+CML_DATASET_VERSION: '2.0.0'
+
+# 训练配置
+GPUS: 1
+BATCHSIZE: 2  # 异常检测可以使用较小的batch size
+STEPS: 50000  # 由于骨干网络冻结，训练步数可以减少
+VAL_CHECK_INTERVAL: 2500
+LOGGING_INTERVAL: 100
+LOG_VIDEO_INTERVAL: 2500
+N_WORKERS: 8
+
+# 优化器配置
+OPTIMIZER:
+  LR: 1e-3  # 异常检测头可以使用较高的学习率
+  WEIGHT_DECAY: 0.01
+  ACCUMULATE_GRAD_BATCHES: 8  # 梯度累积
+  FROZEN:
+    ENABLED: True  # 启用权重冻结
+    TRAIN_LIST: ['cross_modal_fusion', 'anomaly_detection_head', 'voxel_feature_extractor']
+
+# 学习率调度器
+SCHEDULER:
+  NAME: 'OneCycleLR'
+  PCT_START: 0.3
+
+# 预测配置
+PREDICTION:
+  N_SAMPLES: 1
+
+# 模型配置
+MODEL:
+  # 异常检测相关配置
+  ANOMALY_DETECTION:
+    ENABLED: True  # 启用异常检测
+    FREEZE_BACKBONE: True  # 冻结骨干网络
+    HEAD_TYPE: '3dcnn'  # 异常检测头类型: '3dcnn', 'mlp', 'multiscale'
+    OUTPUT_DIM: 1  # 异常分数输出维度
+    HIDDEN_DIM: 128  # 跨模态注意力隐藏维度
+    NUM_HEADS: 8  # 注意力头数
+    DROPOUT: 0.1  # Dropout率
+    
+  # Transformer配置
+  TRANSFORMER:
+    ENABLED: True
+    CHANNELS: 256  # 特征通道数
+    BEV: False
+    LARGE: False
+    
+  # 编码器配置
+  ENCODER:
+    NAME: 'resnet18'  # 图像编码器
+    
+  # 点云配置
+  LIDAR:
+    ENABLED: True
+    POINT_PILLAR:
+      ENABLED: False  # 使用range-view
+    ENCODER: 'resnet18'
+    
+  # 路由配置
+  ROUTE:
+    ENABLED: True
+    BACKBONE: 'resnet18'
+    
+  # 动作维度
+  ACTION_DIM: 2
+  
+  # 嵌入维度
+  EMBEDDING_DIM: 512
+
+# 评估配置
+EVAL:
+  RGB_SUPERVISION: False  # 异常检测不需要RGB监督
+  NO_LIFTING: False
+
+# 语义分割（可选）
+SEMANTIC_SEG:
+  ENABLED: False  # 异常检测主要任务
+
+# 体素分割（用于异常检测）
+VOXEL_SEG:
+  ENABLED: True
+  DIMENSION: 64
+  N_CLASSES: 2  # 正常/异常二分类
+  USE_WEIGHTS: True
+
+# 点云分割（可选）
+LIDAR_SEG:
+  ENABLED: False
+
+# 点云重建（可选）
+LIDAR_RE:
+  ENABLED: False
+
+# 语义图像（可选）
+SEMANTIC_IMAGE:
+  ENABLED: False
+
+# 深度（可选）
+DEPTH:
+  ENABLED: False
+
+# 损失函数配置
+LOSSES:
+  # 异常检测损失权重
+  WEIGHT_ANOMALY: 1.0  # 异常检测损失权重
+  WEIGHT_ACTION: 0.1   # 动作损失权重（辅助任务）
+  WEIGHT_SEGMENTATION: 0.0  # 分割损失权重
+  WEIGHT_INSTANCE: 0.0
+  WEIGHT_REWARD: 0.0
+  WEIGHT_PROBABILISTIC: 1e-3
+  KL_BALANCING_ALPHA: 0.75
+  WEIGHT_LIDAR_RE: 0.0
+  WEIGHT_LIDAR_SEG: 0.0
+  WEIGHT_SEM_IMAGE: 0.0
+  WEIGHT_DEPTH: 0.0
+  WEIGHT_VOXEL: 0.1  # 体素重建损失权重
+  RGB_INSTANCE: False
+  SSIM: False
+
+# 时间序列配置
+RECEPTIVE_FIELD: 2  # 减少感受野以降低计算负担
+FUTURE_HORIZON: 1   # 减少未来预测步数
+
+# 预训练模型路径
+PRETRAINED:
+  PATH: ''  # 可以加载预训练的Mile模型
+  CML_MODEL: ''
+
+# 数据集配置
+DATASET:
+  DATAROOT: 'path_to_dataset'  # 数据集路径
+  VERSION: 'trainval'
+  STRIDE_SEC: 0.2
+  FILTER_BEGINNING_OF_RUN_SEC: 1.0
+  FILTER_NORM_REWARD: 0.6
+
+# 图像配置
+IMAGE:
+  SIZE: (600, 960)
+  CROP: [64, 138, 896, 458]
+  FOV: 100
+  CAMERA_POSITION: [1.0, 0.0, 2.0]
+  CAMERA_ROTATION: [0.0, 0.0, 0.0]
+  IMAGENET_MEAN: (0.485, 0.456, 0.406)
+  IMAGENET_STD: (0.229, 0.224, 0.225)
+
+# 点云配置
+POINTS:
+  LIDAR_POSITION: [1.0, 0.0, 2.0]
+  LIDAR_ROTATION: [0.0, 0.0, 0.0]
+  FOV: [-30, 10]
+  CHANNELS: 64
+  N_PER_SECOND: 600000
+  HORIZON_RESOLUTION: 1024
+
+# 体素配置
+VOXEL:
+  SIZE: [192, 192, 64]  # 体素网格尺寸
+  RESOLUTION: 0.2       # 体素分辨率（米）
+  EV_POSITION: [32, 96, 12]  # 自车位置
+
+# BEV配置
+BEV:
+  SIZE: [192, 192]
+  RESOLUTION: 0.2
+  OFFSET_FORWARD: -64
+  FEATURE_DOWNSAMPLE: 4
+
+# 路由配置
+ROUTE:
+  SIZE: 64
+
+# 速度配置
+SPEED:
+  NOISE_STD: 1.4
+  NORMALISATION: 5.0
+
+# 模型转换配置
+MODEL:
+  TRANSITION:
+    ENABLED: True
+    HIDDEN_STATE_DIM: 1024
+    STATE_DIM: 512
+    ACTION_LATENT_DIM: 64
+    USE_DROPOUT: True
+    DROPOUT_PROBABILITY: 0.15
+
+# 采样器配置
+SAMPLER:
+  ENABLED: False
+  WITH_ACCELERATION: False
+  WITH_STEERING: False
+  N_BINS: 5
+  WITH_ROUTE_COMMAND: False
+  COMMAND_WEIGHTS: [1.0, 1.0, 1.0, 1.0, 1.0, 1.0]
+
+# 奖励模型配置
+MODEL:
+  REWARD:
+    ENABLED: False
