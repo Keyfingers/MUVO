@@ -128,7 +128,11 @@ class MileAnomalyDetection(nn.Module):
                 hidden_dim=getattr(cfg.ANOMALY_DETECTION, 'HIDDEN_DIM', 128),
                 num_heads=getattr(cfg.ANOMALY_DETECTION, 'NUM_HEADS', 8),
                 voxel_size=cfg.VOXEL.SIZE,
-                dropout=getattr(cfg.ANOMALY_DETECTION, 'DROPOUT', 0.1)
+                dropout=getattr(cfg.ANOMALY_DETECTION, 'DROPOUT', 0.1),
+                use_positional_encoding=getattr(cfg.ANOMALY_DETECTION.POSITIONAL_ENCODING, 'ENABLED', True),
+                pe_encoding_type=getattr(cfg.ANOMALY_DETECTION.POSITIONAL_ENCODING, 'TYPE', 'sincos'),
+                alignment_method=getattr(cfg.ANOMALY_DETECTION.FEATURE_ALIGNMENT, 'METHOD', 'bilinear'),
+                use_alignment_network=getattr(cfg.ANOMALY_DETECTION.FEATURE_ALIGNMENT, 'USE_ALIGNMENT_NETWORK', True)
             )
             
             # ==================== Stage 4: 异常检测头 ====================

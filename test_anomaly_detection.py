@@ -38,14 +38,8 @@ def test_cross_modal_attention():
     """
     print("🧪 测试跨模态注意力融合模块...")
     
-    # 创建模块
-    fusion_module = CrossModalFusionModule(
-        pc_feature_dim=256,
-        img_feature_dim=256,
-        hidden_dim=128,
-        num_heads=8,
-        voxel_size=(192, 192, 64)
-    )
+    # 测试不同的位置编码类型
+    pe_types = ['sincos', 'learned', 'hybrid']
     
     # 创建测试数据
     batch_size = 2
@@ -55,14 +49,32 @@ def test_cross_modal_attention():
     voxel_coords = voxel_coords.expand(batch_size, -1, -1)
     projection_matrix = torch.randn(batch_size, 3, 4)
     
-    # 前向传播
-    with torch.no_grad():
-        enhanced_features = fusion_module(
-            pc_features=pc_features,
-            img_features=img_features,
-            voxel_coords=voxel_coords,
-            projection_matrix=projection_matrix
+    for pe_type in pe_types:
+        print(f"  📊 测试位置编码类型: {pe_type}")
+        
+        # 创建模块
+        fusion_module = CrossModalFusionModule(
+            pc_feature_dim=256,
+            img_feature_dim=256,
+            hidden_dim=128,
+            num_heads=8,
+            voxel_size=(192, 192, 64),
+            use_positional_encoding=True,
+            pe_encoding_type=pe_type,
+            alignment_method='bilinear',
+            use_alignment_network=True
         )
+        
+        # 前向传播
+        with torch.no_grad():
+            enhanced_features = fusion_module(
+                pc_features=pc_features,
+                img_features=img_features,
+                voxel_coords=voxel_coords,
+                projection_matrix=projection_matrix
+            )
+        
+        print(f"    ✅ {pe_type} 位置编码测试通过!")
     
     print(f"✅ 输入点云特征形状: {pc_features.shape}")
     print(f"✅ 输入图像特征形状: {img_features.shape}")
@@ -70,6 +82,49 @@ def test_cross_modal_attention():
     print(f"✅ 跨模态注意力融合测试通过!")
     
     return enhanced_features
+
+
+def test_feature_alignment():
+    """
+    测试特征对齐模块
+    """
+    print("\n🧪 测试特征对齐模块...")
+    
+    # 测试不同的对齐方法
+    alignment_methods = ['nearest', 'bilinear', 'network']
+    
+    batch_size = 2
+    img_features = torch.randn(batch_size, 256, 75, 120)    # 图像特征
+    voxel_coords = create_voxel_coordinates((192, 192, 64), img_features.device)
+    voxel_coords = voxel_coords.expand(batch_size, -1, -1)
+    projection_matrix = torch.randn(batch_size, 3, 4)
+    
+    for method in alignment_methods:
+        print(f"  📊 测试对齐方法: {method}")
+        
+        from muvo.models.cross_modal_attention import FeatureAlignment
+        
+        # 创建对齐模块
+        alignment_module = FeatureAlignment(
+            img_feature_dim=256,
+            voxel_size=(192, 192, 64),
+            alignment_method=method,
+            use_alignment_network=(method == 'network')
+        )
+        
+        # 前向传播
+        with torch.no_grad():
+            aligned_features = alignment_module(
+                img_features=img_features,
+                voxel_coords=voxel_coords,
+                projection_matrix=projection_matrix
+            )
+        
+        print(f"    ✅ {method} 对齐方法测试通过!")
+        print(f"    ✅ 输入图像特征形状: {img_features.shape}")
+        print(f"    ✅ 输出对齐特征形状: {aligned_features.shape}")
+    
+    print("✅ 特征对齐模块测试通过!")
 
 
 def test_anomaly_detection_head():
@@ -186,6 +241,9 @@ def main():
     try:
         # 测试跨模态注意力融合
         enhanced_features = test_cross_modal_attention()
+        
+        # 测试特征对齐
+        test_feature_alignment()
         
         # 测试异常检测头
         outputs_3d, outputs_seq = test_anomaly_detection_head()

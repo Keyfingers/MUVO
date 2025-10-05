@@ -55,6 +55,22 @@ MODEL:
     NUM_HEADS: 8  # 注意力头数
     DROPOUT: 0.1  # Dropout率
     
+    # 位置编码配置
+    POSITIONAL_ENCODING:
+      ENABLED: True  # 启用位置编码
+      TYPE: 'sincos'  # 位置编码类型: 'sincos', 'learned', 'hybrid'
+      MAX_LEN: 10000  # 最大序列长度
+    
+    # 特征对齐配置
+    FEATURE_ALIGNMENT:
+      METHOD: 'bilinear'  # 对齐方法: 'nearest', 'bilinear', 'network'
+      USE_ALIGNMENT_NETWORK: True  # 使用对齐网络
+      
+    # 消融实验配置
+    ABLATION_STUDY:
+      ENABLED: False  # 启用消融实验
+      EXPERIMENTS: ['no_pe', 'sincos_pe', 'learned_pe', 'hybrid_pe']  # 实验类型
+    
   # Transformer配置
   TRANSFORMER:
     ENABLED: True
