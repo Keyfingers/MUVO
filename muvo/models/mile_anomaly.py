@@ -51,8 +51,10 @@ class MileAnomalyDetection(nn.Module):
         
         # 图像特征编码器（权重冻结）
         if self.cfg.MODEL.ENCODER.NAME == 'resnet18':
+            # 检查是否使用预训练模型
+            pretrained = getattr(cfg.MODEL.ENCODER, 'PRETRAINED', True)
             self.encoder = timm.create_model(
-                cfg.MODEL.ENCODER.NAME, pretrained=True, features_only=True, out_indices=[2, 3, 4],
+                cfg.MODEL.ENCODER.NAME, pretrained=pretrained, features_only=True, out_indices=[2, 3, 4],
             )
             feature_info = self.encoder.feature_info.get_dicts(keys=['num_chs', 'reduction'])
             

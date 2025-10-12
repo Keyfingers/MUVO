@@ -57,9 +57,9 @@ class PositionalEncoding3D(nn.Module):
         pe_z = self._get_1d_encoding(Z, 2)
         
         # 广播到3D空间
-        pe_x = pe_x.unsqueeze(1).unsqueeze(2).expand(-1, Y, Z)
-        pe_y = pe_y.unsqueeze(0).unsqueeze(2).expand(X, -1, Z)
-        pe_z = pe_z.unsqueeze(0).unsqueeze(1).expand(X, Y, -1)
+        pe_x = pe_x.unsqueeze(1).unsqueeze(2).expand(-1, Y, Z, -1)
+        pe_y = pe_y.unsqueeze(0).unsqueeze(2).expand(X, -1, Z, -1)
+        pe_z = pe_z.unsqueeze(0).unsqueeze(1).expand(X, Y, -1, -1)
         
         # 组合位置编码
         pe = pe_x + pe_y + pe_z
@@ -478,7 +478,7 @@ class FeatureAlignment(nn.Module):
         if hasattr(self, 'alignment_network'):
             # 将对齐后的特征重新整形为空间格式进行网络处理
             X, Y, Z = self.voxel_size
-            base_aligned_3d = base_aligned.view(B, C, X, Y, Z)
+            base_aligned_3d = base_aligned.reshape(B, C, X, Y, Z)
             
             # 应用对齐网络（需要适配3D输入）
             # 这里简化处理，实际可以设计专门的3D对齐网络

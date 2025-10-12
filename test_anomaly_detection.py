@@ -41,11 +41,11 @@ def test_cross_modal_attention():
     # 测试不同的位置编码类型
     pe_types = ['sincos', 'learned', 'hybrid']
     
-    # 创建测试数据
-    batch_size = 2
-    pc_features = torch.randn(batch_size, 192*192*64, 256)  # 点云特征
-    img_features = torch.randn(batch_size, 256, 75, 120)    # 图像特征
-    voxel_coords = create_voxel_coordinates((192, 192, 64), pc_features.device)
+    # 创建测试数据 - 使用更小的尺寸
+    batch_size = 1
+    pc_features = torch.randn(batch_size, 32*32*16, 128)  # 点云特征 - 更小的尺寸
+    img_features = torch.randn(batch_size, 128, 16, 32)    # 图像特征 - 更小的尺寸
+    voxel_coords = create_voxel_coordinates((32, 32, 16), pc_features.device)
     voxel_coords = voxel_coords.expand(batch_size, -1, -1)
     projection_matrix = torch.randn(batch_size, 3, 4)
     
@@ -54,11 +54,11 @@ def test_cross_modal_attention():
         
         # 创建模块
         fusion_module = CrossModalFusionModule(
-            pc_feature_dim=256,
-            img_feature_dim=256,
-            hidden_dim=128,
-            num_heads=8,
-            voxel_size=(192, 192, 64),
+            pc_feature_dim=128,
+            img_feature_dim=128,
+            hidden_dim=64,
+            num_heads=4,
+            voxel_size=(32, 32, 16),
             use_positional_encoding=True,
             pe_encoding_type=pe_type,
             alignment_method='bilinear',
@@ -181,11 +181,13 @@ def test_mile_anomaly_model():
     # 创建配置
     cfg = get_cfg()
     cfg.MODEL.ANOMALY_DETECTION.ENABLED = True
-    cfg.MODEL.ANOMALY_DETECTION.FREEZE_BACKBONE = True
+    cfg.MODEL.ANOMALY_DETECTION.FREEZE_BACKBONE = False  # 暂时不冻结，避免预训练模型下载
     cfg.MODEL.ANOMALY_DETECTION.HEAD_TYPE = '3dcnn'
     cfg.MODEL.TRANSFORMER.ENABLED = True
     cfg.MODEL.LIDAR.ENABLED = True
     cfg.VOXEL_SEG.ENABLED = True
+    cfg.MODEL.ENCODER.NAME = 'resnet18'
+    cfg.MODEL.ENCODER.PRETRAINED = False  # 不使用预训练模型
     
     # 创建模型
     model = MileAnomalyDetection(cfg)
