@@ -161,7 +161,7 @@ PRETRAINED:
 
 # 数据集配置
 DATASET:
-  DATAROOT: 'path_to_dataset'  # 数据集路径
+  DATAROOT: '/root/autodl-tmp/datasets/AnoVox'  # AnoVox数据集路径
   VERSION: 'trainval'
   STRIDE_SEC: 0.2
   FILTER_BEGINNING_OF_RUN_SEC: 1.0
