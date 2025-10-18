@@ -1,0 +1,249 @@
+======================================================================
+📊 Focal Loss模型评估与对比
+======================================================================
+
+📱 使用设备: cuda
+
+📁 加载数据...
+[Warning] 跳过场景 Scenario_debde713-4da4-400b-816c-b10c28a14861: 缺少sensor_setup.json
+[AnoVoxDataset] 加载 train 集: 22 场景, 4200 样本
+
+🏗️ 加载Focal Loss模型...
+🔧 加载预训练ResNet18...
+   ❄️  冻结ResNet权重
+✅ 加载最终模型
+
+🔍 评估Focal Loss模型...
+Evaluating:   0%|          | 0/263 [00:00<?, ?it/s]Evaluating:   0%|          | 1/263 [00:02<08:47,  2.01s/it]Evaluating:   1%|          | 3/263 [00:02<02:28,  1.75it/s]Evaluating:   2%|▏         | 5/263 [00:02<01:19,  3.24it/s]Evaluating:   3%|▎         | 7/263 [00:02<00:52,  4.88it/s]Evaluating:   3%|▎         | 9/263 [00:02<00:37,  6.69it/s]Evaluating:   4%|▍         | 11/263 [00:02<00:29,  8.50it/s]Evaluating:   5%|▍         | 13/263 [00:02<00:24, 10.04it/s]Evaluating:   6%|▌         | 15/263 [00:03<00:30,  8.06it/s]Evaluating:   6%|▋         | 17/263 [00:03<00:25,  9.64it/s]Evaluating:   7%|▋         | 19/263 [00:03<00:29,  8.40it/s]Evaluating:   8%|▊         | 21/263 [00:03<00:24,  9.99it/s]Evaluating:   9%|▊         | 23/263 [00:03<00:26,  8.92it/s]Evaluating:  10%|▉         | 25/263 [00:04<00:22, 10.35it/s]Evaluating:  10%|█         | 27/263 [00:04<00:27,  8.73it/s]Evaluating:  11%|█         | 29/263 [00:04<00:22, 10.25it/s]Evaluating:  12%|█▏        | 31/263 [00:04<00:23,  9.68it/s]Evaluating:  13%|█▎        | 33/263 [00:04<00:20, 11.09it/s]Evaluating:  13%|█▎        | 35/263 [00:05<00:22, 10.15it/s]Evaluating:  14%|█▍        | 37/263 [00:05<00:21, 10.76it/s]Evaluating:  15%|█▍        | 39/263 [00:05<00:21, 10.31it/s]Evaluating:  16%|█▌        | 41/263 [00:05<00:20, 10.73it/s]Evaluating:  16%|█▋        | 43/263 [00:05<00:19, 11.16it/s]Evaluating:  17%|█▋        | 45/263 [00:06<00:22,  9.76it/s]Evaluating:  18%|█▊        | 47/263 [00:06<00:19, 10.88it/s]Evaluating:  19%|█▊        | 49/263 [00:06<00:23,  9.04it/s]Evaluating:  19%|█▉        | 51/263 [00:06<00:20, 10.36it/s]Evaluating:  20%|██        | 53/263 [00:06<00:23,  8.98it/s]Evaluating:  21%|██        | 55/263 [00:07<00:20, 10.36it/s]Evaluating:  22%|██▏       | 57/263 [00:07<00:20,  9.81it/s]Evaluating:  22%|██▏       | 59/263 [00:07<00:18, 11.12it/s]Evaluating:  23%|██▎       | 61/263 [00:07<00:20,  9.88it/s]Evaluating:  24%|██▍       | 63/263 [00:07<00:18, 11.05it/s]Evaluating:  25%|██▍       | 65/263 [00:08<00:20,  9.86it/s]Evaluating:  25%|██▌       | 67/263 [00:08<00:17, 11.14it/s]Evaluating:  26%|██▌       | 69/263 [00:08<00:18, 10.35it/s]Evaluating:  27%|██▋       | 71/263 [00:08<00:16, 11.41it/s]Evaluating:  28%|██▊       | 73/263 [00:08<00:18, 10.49it/s]Evaluating:  29%|██▊       | 75/263 [00:08<00:16, 11.58it/s]Evaluating:  29%|██▉       | 77/263 [00:09<00:18, 10.33it/s]Evaluating:  30%|███       | 79/263 [00:09<00:17, 10.61it/s]Evaluating:  31%|███       | 81/263 [00:09<00:17, 10.23it/s]Evaluating:  32%|███▏      | 83/263 [00:09<00:17, 10.02it/s]Evaluating:  32%|███▏      | 85/263 [00:09<00:16, 10.88it/s]Evaluating:  33%|███▎      | 87/263 [00:10<00:17,  9.86it/s]Evaluating:  34%|███▍      | 89/263 [00:10<00:15, 11.00it/s]Evaluating:  35%|███▍      | 91/263 [00:10<00:17,  9.92it/s]Evaluating:  35%|███▌      | 93/263 [00:10<00:15, 11.07it/s]Evaluating:  36%|███▌      | 95/263 [00:10<00:16, 10.30it/s]Evaluating:  37%|███▋      | 97/263 [00:10<00:14, 11.34it/s]Evaluating:  38%|███▊      | 99/263 [00:11<00:15, 10.75it/s]Evaluating:  38%|███▊      | 101/263 [00:11<00:13, 11.85it/s]Evaluating:  39%|███▉      | 103/263 [00:11<00:14, 11.23it/s]Evaluating:  40%|███▉      | 105/263 [00:11<00:12, 12.19it/s]Evaluating:  41%|████      | 107/263 [00:11<00:13, 11.65it/s]Evaluating:  41%|████▏     | 109/263 [00:11<00:12, 11.85it/s]Evaluating:  42%|████▏     | 111/263 [00:12<00:13, 11.55it/s]Evaluating:  43%|████▎     | 113/263 [00:12<00:13, 11.48it/s]Evaluating:  44%|████▎     | 115/263 [00:12<00:12, 11.96it/s]Evaluating:  44%|████▍     | 117/263 [00:12<00:12, 11.54it/s]Evaluating:  45%|████▌     | 119/263 [00:12<00:11, 12.16it/s]Evaluating:  46%|████▌     | 121/263 [00:13<00:12, 11.41it/s]Evaluating:  47%|████▋     | 123/263 [00:13<00:11, 12.15it/s]Evaluating:  48%|████▊     | 125/263 [00:13<00:13, 10.38it/s]Evaluating:  48%|████▊     | 127/263 [00:13<00:11, 11.52it/s]Evaluating:  49%|████▉     | 129/263 [00:13<00:14,  9.49it/s]Evaluating:  50%|████▉     | 131/263 [00:13<00:12, 10.79it/s]Evaluating:  51%|█████     | 133/263 [00:14<00:13,  9.48it/s]Evaluating:  51%|█████▏    | 135/263 [00:14<00:11, 10.68it/s]Evaluating:  52%|█████▏    | 137/263 [00:14<00:14,  8.88it/s]Evaluating:  53%|█████▎    | 139/263 [00:14<00:12, 10.13it/s]Evaluating:  54%|█████▎    | 141/263 [00:15<00:14,  8.38it/s]Evaluating:  54%|█████▍    | 143/263 [00:15<00:12,  9.71it/s]Evaluating:  55%|█████▌    | 145/263 [00:15<00:13,  9.08it/s]Evaluating:  56%|█████▌    | 147/263 [00:15<00:11, 10.46it/s]Evaluating:  57%|█████▋    | 149/263 [00:15<00:11,  9.55it/s]Evaluating:  57%|█████▋    | 151/263 [00:16<00:10, 10.72it/s]Evaluating:  58%|█████▊    | 153/263 [00:16<00:10, 10.44it/s]Evaluating:  59%|█████▉    | 155/263 [00:16<00:09, 11.53it/s]Evaluating:  60%|█████▉    | 157/263 [00:16<00:09, 10.66it/s]Evaluating:  60%|██████    | 159/263 [00:16<00:08, 11.70it/s]Evaluating:  61%|██████    | 161/263 [00:16<00:09, 10.77it/s]Evaluating:  62%|██████▏   | 163/263 [00:17<00:08, 11.73it/s]Evaluating:  63%|██████▎   | 165/263 [00:17<00:09, 10.30it/s]Evaluating:  63%|██████▎   | 167/263 [00:17<00:08, 11.36it/s]Evaluating:  64%|██████▍   | 169/263 [00:17<00:08, 10.61it/s]Evaluating:  65%|██████▌   | 171/263 [00:17<00:07, 11.64it/s]Evaluating:  66%|██████▌   | 173/263 [00:18<00:08, 10.60it/s]Evaluating:  67%|██████▋   | 175/263 [00:18<00:07, 11.63it/s]Evaluating:  67%|██████▋   | 177/263 [00:18<00:07, 11.11it/s]Evaluating:  68%|██████▊   | 179/263 [00:18<00:06, 12.38it/s]Evaluating:  69%|██████▉   | 181/263 [00:18<00:07, 11.35it/s]Evaluating:  70%|██████▉   | 183/263 [00:18<00:06, 12.47it/s]Evaluating:  70%|███████   | 185/263 [00:19<00:06, 11.36it/s]Evaluating:  71%|███████   | 187/263 [00:19<00:06, 12.53it/s]Evaluating:  72%|███████▏  | 189/263 [00:19<00:07, 10.23it/s]Evaluating:  73%|███████▎  | 191/263 [00:19<00:06, 11.55it/s]Evaluating:  73%|███████▎  | 193/263 [00:19<00:06, 10.60it/s]Evaluating:  74%|███████▍  | 195/263 [00:19<00:05, 11.81it/s]Evaluating:  75%|███████▍  | 197/263 [00:20<00:06, 10.86it/s]Evaluating:  76%|███████▌  | 199/263 [00:20<00:05, 12.06it/s]Evaluating:  76%|███████▋  | 201/263 [00:20<00:05, 10.79it/s]Evaluating:  77%|███████▋  | 203/263 [00:20<00:04, 12.02it/s]Evaluating:  78%|███████▊  | 205/263 [00:20<00:05, 11.12it/s]Evaluating:  79%|███████▊  | 207/263 [00:20<00:04, 12.22it/s]Evaluating:  79%|███████▉  | 209/263 [00:21<00:04, 11.10it/s]Evaluating:  80%|████████  | 211/263 [00:21<00:04, 12.27it/s]Evaluating:  81%|████████  | 213/263 [00:21<00:04, 10.96it/s]Evaluating:  82%|████████▏ | 215/263 [00:21<00:03, 12.20it/s]Evaluating:  83%|████████▎ | 217/263 [00:21<00:04, 10.68it/s]Evaluating:  83%|████████▎ | 219/263 [00:22<00:03, 11.89it/s]Evaluating:  84%|████████▍ | 221/263 [00:22<00:03, 10.79it/s]Evaluating:  85%|████████▍ | 223/263 [00:22<00:03, 12.01it/s]Evaluating:  86%|████████▌ | 225/263 [00:22<00:03, 10.95it/s]Evaluating:  86%|████████▋ | 227/263 [00:22<00:02, 12.17it/s]Evaluating:  87%|████████▋ | 229/263 [00:22<00:03, 11.08it/s]Evaluating:  88%|████████▊ | 231/263 [00:23<00:02, 12.29it/s]Evaluating:  89%|████████▊ | 233/263 [00:23<00:02, 11.24it/s]Evaluating:  89%|████████▉ | 235/263 [00:23<00:02, 12.41it/s]Evaluating:  90%|█████████ | 237/263 [00:23<00:02, 10.95it/s]Evaluating:  91%|█████████ | 239/263 [00:23<00:01, 12.14it/s]Evaluating:  92%|█████████▏| 241/263 [00:23<00:02, 10.71it/s]Evaluating:  92%|█████████▏| 243/263 [00:24<00:01, 11.99it/s]Evaluating:  93%|█████████▎| 245/263 [00:24<00:01, 10.82it/s]Evaluating:  94%|█████████▍| 247/263 [00:24<00:01, 12.10it/s]Evaluating:  95%|█████████▍| 249/263 [00:24<00:01, 10.42it/s]Evaluating:  95%|█████████▌| 251/263 [00:24<00:01, 11.73it/s]Evaluating:  96%|█████████▌| 253/263 [00:25<00:00, 10.90it/s]Evaluating:  97%|█████████▋| 255/263 [00:25<00:00, 12.26it/s]Evaluating:  98%|█████████▊| 257/263 [00:25<00:00, 11.00it/s]Evaluating:  98%|█████████▊| 259/263 [00:25<00:00, 12.29it/s]Evaluating:  99%|█████████▉| 261/263 [00:25<00:00, 11.16it/s]Evaluating: 100%|██████████| 263/263 [00:25<00:00, 10.18it/s]
+evaluate_focal_loss.py:222: UserWarning: Glyph 27169 (\N{CJK UNIFIED IDEOGRAPH-6A21}) missing from current font.
+  plt.tight_layout()
+evaluate_focal_loss.py:222: UserWarning: Glyph 22411 (\N{CJK UNIFIED IDEOGRAPH-578B}) missing from current font.
+  plt.tight_layout()
+evaluate_focal_loss.py:222: UserWarning: Glyph 20173 (\N{CJK UNIFIED IDEOGRAPH-4ECD}) missing from current font.
+  plt.tight_layout()
+evaluate_focal_loss.py:222: UserWarning: Glyph 22312 (\N{CJK UNIFIED IDEOGRAPH-5728}) missing from current font.
+  plt.tight_layout()
+evaluate_focal_loss.py:222: UserWarning: Glyph 25237 (\N{CJK UNIFIED IDEOGRAPH-6295}) missing from current font.
+  plt.tight_layout()
+evaluate_focal_loss.py:222: UserWarning: Glyph 26426 (\N{CJK UNIFIED IDEOGRAPH-673A}) missing from current font.
+  plt.tight_layout()
+evaluate_focal_loss.py:222: UserWarning: Glyph 21462 (\N{CJK UNIFIED IDEOGRAPH-53D6}) missing from current font.
+  plt.tight_layout()
+evaluate_focal_loss.py:222: UserWarning: Glyph 24039 (\N{CJK UNIFIED IDEOGRAPH-5DE7}) missing from current font.
+  plt.tight_layout()
+evaluate_focal_loss.py:222: UserWarning: Glyph 10060 (\N{CROSS MARK}) missing from current font.
+  plt.tight_layout()
+evaluate_focal_loss.py:222: UserWarning: Glyph 21442 (\N{CJK UNIFIED IDEOGRAPH-53C2}) missing from current font.
+  plt.tight_layout()
+evaluate_focal_loss.py:222: UserWarning: Glyph 25968 (\N{CJK UNIFIED IDEOGRAPH-6570}) missing from current font.
+  plt.tight_layout()
+evaluate_focal_loss.py:222: UserWarning: Glyph 21487 (\N{CJK UNIFIED IDEOGRAPH-53EF}) missing from current font.
+  plt.tight_layout()
+evaluate_focal_loss.py:222: UserWarning: Glyph 33021 (\N{CJK UNIFIED IDEOGRAPH-80FD}) missing from current font.
+  plt.tight_layout()
+evaluate_focal_loss.py:222: UserWarning: Glyph 19981 (\N{CJK UNIFIED IDEOGRAPH-4E0D}) missing from current font.
+  plt.tight_layout()
+evaluate_focal_loss.py:222: UserWarning: Glyph 22815 (\N{CJK UNIFIED IDEOGRAPH-591F}) missing from current font.
+  plt.tight_layout()
+evaluate_focal_loss.py:222: UserWarning: Glyph 28608 (\N{CJK UNIFIED IDEOGRAPH-6FC0}) missing from current font.
+  plt.tight_layout()
+evaluate_focal_loss.py:222: UserWarning: Glyph 36827 (\N{CJK UNIFIED IDEOGRAPH-8FDB}) missing from current font.
+  plt.tight_layout()
+evaluate_focal_loss.py:222: UserWarning: Glyph 20266 (\N{CJK UNIFIED IDEOGRAPH-4F2A}) missing from current font.
+  plt.tight_layout()
+evaluate_focal_loss.py:222: UserWarning: Glyph 26631 (\N{CJK UNIFIED IDEOGRAPH-6807}) missing from current font.
+  plt.tight_layout()
+evaluate_focal_loss.py:222: UserWarning: Glyph 31614 (\N{CJK UNIFIED IDEOGRAPH-7B7E}) missing from current font.
+  plt.tight_layout()
+evaluate_focal_loss.py:222: UserWarning: Glyph 36136 (\N{CJK UNIFIED IDEOGRAPH-8D28}) missing from current font.
+  plt.tight_layout()
+evaluate_focal_loss.py:222: UserWarning: Glyph 37327 (\N{CJK UNIFIED IDEOGRAPH-91CF}) missing from current font.
+  plt.tight_layout()
+evaluate_focal_loss.py:222: UserWarning: Glyph 22826 (\N{CJK UNIFIED IDEOGRAPH-592A}) missing from current font.
+  plt.tight_layout()
+evaluate_focal_loss.py:222: UserWarning: Glyph 24046 (\N{CJK UNIFIED IDEOGRAPH-5DEE}) missing from current font.
+  plt.tight_layout()
+evaluate_focal_loss.py:222: UserWarning: Glyph 38656 (\N{CJK UNIFIED IDEOGRAPH-9700}) missing from current font.
+  plt.tight_layout()
+evaluate_focal_loss.py:222: UserWarning: Glyph 35201 (\N{CJK UNIFIED IDEOGRAPH-8981}) missing from current font.
+  plt.tight_layout()
+evaluate_focal_loss.py:222: UserWarning: Glyph 26356 (\N{CJK UNIFIED IDEOGRAPH-66F4}) missing from current font.
+  plt.tight_layout()
+evaluate_focal_loss.py:222: UserWarning: Glyph 24378 (\N{CJK UNIFIED IDEOGRAPH-5F3A}) missing from current font.
+  plt.tight_layout()
+evaluate_focal_loss.py:222: UserWarning: Glyph 30340 (\N{CJK UNIFIED IDEOGRAPH-7684}) missing from current font.
+  plt.tight_layout()
+evaluate_focal_loss.py:222: UserWarning: Glyph 30417 (\N{CJK UNIFIED IDEOGRAPH-76D1}) missing from current font.
+  plt.tight_layout()
+evaluate_focal_loss.py:222: UserWarning: Glyph 30563 (\N{CJK UNIFIED IDEOGRAPH-7763}) missing from current font.
+  plt.tight_layout()
+evaluate_focal_loss.py:222: UserWarning: Glyph 20449 (\N{CJK UNIFIED IDEOGRAPH-4FE1}) missing from current font.
+  plt.tight_layout()
+evaluate_focal_loss.py:222: UserWarning: Glyph 21495 (\N{CJK UNIFIED IDEOGRAPH-53F7}) missing from current font.
+  plt.tight_layout()
+evaluate_focal_loss.py:222: UserWarning: Glyph 22686 (\N{CJK UNIFIED IDEOGRAPH-589E}) missing from current font.
+  plt.tight_layout()
+evaluate_focal_loss.py:222: UserWarning: Glyph 22823 (\N{CJK UNIFIED IDEOGRAPH-5927}) missing from current font.
+  plt.tight_layout()
+evaluate_focal_loss.py:222: UserWarning: Glyph 20351 (\N{CJK UNIFIED IDEOGRAPH-4F7F}) missing from current font.
+  plt.tight_layout()
+evaluate_focal_loss.py:222: UserWarning: Glyph 29992 (\N{CJK UNIFIED IDEOGRAPH-7528}) missing from current font.
+  plt.tight_layout()
+evaluate_focal_loss.py:222: UserWarning: Glyph 20307 (\N{CJK UNIFIED IDEOGRAPH-4F53}) missing from current font.
+  plt.tight_layout()
+evaluate_focal_loss.py:222: UserWarning: Glyph 32032 (\N{CJK UNIFIED IDEOGRAPH-7D20}) missing from current font.
+  plt.tight_layout()
+evaluate_focal_loss.py:222: UserWarning: Glyph 32423 (\N{CJK UNIFIED IDEOGRAPH-7EA7}) missing from current font.
+  plt.tight_layout()
+evaluate_focal_loss.py:222: UserWarning: Glyph 21152 (\N{CJK UNIFIED IDEOGRAPH-52A0}) missing from current font.
+  plt.tight_layout()
+evaluate_focal_loss.py:222: UserWarning: Glyph 24322 (\N{CJK UNIFIED IDEOGRAPH-5F02}) missing from current font.
+  plt.tight_layout()
+evaluate_focal_loss.py:222: UserWarning: Glyph 24120 (\N{CJK UNIFIED IDEOGRAPH-5E38}) missing from current font.
+  plt.tight_layout()
+evaluate_focal_loss.py:222: UserWarning: Glyph 26679 (\N{CJK UNIFIED IDEOGRAPH-6837}) missing from current font.
+  plt.tight_layout()
+evaluate_focal_loss.py:222: UserWarning: Glyph 26412 (\N{CJK UNIFIED IDEOGRAPH-672C}) missing from current font.
+  plt.tight_layout()
+evaluate_focal_loss.py:222: UserWarning: Glyph 26435 (\N{CJK UNIFIED IDEOGRAPH-6743}) missing from current font.
+  plt.tight_layout()
+evaluate_focal_loss.py:222: UserWarning: Glyph 37325 (\N{CJK UNIFIED IDEOGRAPH-91CD}) missing from current font.
+  plt.tight_layout()
+evaluate_focal_loss.py:223: UserWarning: Glyph 27169 (\N{CJK UNIFIED IDEOGRAPH-6A21}) missing from current font.
+  plt.savefig('visualizations/focal_loss_evaluation.png', dpi=150, bbox_inches='tight')
+evaluate_focal_loss.py:223: UserWarning: Glyph 22411 (\N{CJK UNIFIED IDEOGRAPH-578B}) missing from current font.
+  plt.savefig('visualizations/focal_loss_evaluation.png', dpi=150, bbox_inches='tight')
+evaluate_focal_loss.py:223: UserWarning: Glyph 20173 (\N{CJK UNIFIED IDEOGRAPH-4ECD}) missing from current font.
+  plt.savefig('visualizations/focal_loss_evaluation.png', dpi=150, bbox_inches='tight')
+evaluate_focal_loss.py:223: UserWarning: Glyph 22312 (\N{CJK UNIFIED IDEOGRAPH-5728}) missing from current font.
+  plt.savefig('visualizations/focal_loss_evaluation.png', dpi=150, bbox_inches='tight')
+evaluate_focal_loss.py:223: UserWarning: Glyph 25237 (\N{CJK UNIFIED IDEOGRAPH-6295}) missing from current font.
+  plt.savefig('visualizations/focal_loss_evaluation.png', dpi=150, bbox_inches='tight')
+evaluate_focal_loss.py:223: UserWarning: Glyph 26426 (\N{CJK UNIFIED IDEOGRAPH-673A}) missing from current font.
+  plt.savefig('visualizations/focal_loss_evaluation.png', dpi=150, bbox_inches='tight')
+evaluate_focal_loss.py:223: UserWarning: Glyph 21462 (\N{CJK UNIFIED IDEOGRAPH-53D6}) missing from current font.
+  plt.savefig('visualizations/focal_loss_evaluation.png', dpi=150, bbox_inches='tight')
+evaluate_focal_loss.py:223: UserWarning: Glyph 24039 (\N{CJK UNIFIED IDEOGRAPH-5DE7}) missing from current font.
+  plt.savefig('visualizations/focal_loss_evaluation.png', dpi=150, bbox_inches='tight')
+evaluate_focal_loss.py:223: UserWarning: Glyph 10060 (\N{CROSS MARK}) missing from current font.
+  plt.savefig('visualizations/focal_loss_evaluation.png', dpi=150, bbox_inches='tight')
+evaluate_focal_loss.py:223: UserWarning: Glyph 21442 (\N{CJK UNIFIED IDEOGRAPH-53C2}) missing from current font.
+  plt.savefig('visualizations/focal_loss_evaluation.png', dpi=150, bbox_inches='tight')
+evaluate_focal_loss.py:223: UserWarning: Glyph 25968 (\N{CJK UNIFIED IDEOGRAPH-6570}) missing from current font.
+  plt.savefig('visualizations/focal_loss_evaluation.png', dpi=150, bbox_inches='tight')
+evaluate_focal_loss.py:223: UserWarning: Glyph 21487 (\N{CJK UNIFIED IDEOGRAPH-53EF}) missing from current font.
+  plt.savefig('visualizations/focal_loss_evaluation.png', dpi=150, bbox_inches='tight')
+evaluate_focal_loss.py:223: UserWarning: Glyph 33021 (\N{CJK UNIFIED IDEOGRAPH-80FD}) missing from current font.
+  plt.savefig('visualizations/focal_loss_evaluation.png', dpi=150, bbox_inches='tight')
+evaluate_focal_loss.py:223: UserWarning: Glyph 19981 (\N{CJK UNIFIED IDEOGRAPH-4E0D}) missing from current font.
+  plt.savefig('visualizations/focal_loss_evaluation.png', dpi=150, bbox_inches='tight')
+evaluate_focal_loss.py:223: UserWarning: Glyph 22815 (\N{CJK UNIFIED IDEOGRAPH-591F}) missing from current font.
+  plt.savefig('visualizations/focal_loss_evaluation.png', dpi=150, bbox_inches='tight')
+evaluate_focal_loss.py:223: UserWarning: Glyph 28608 (\N{CJK UNIFIED IDEOGRAPH-6FC0}) missing from current font.
+  plt.savefig('visualizations/focal_loss_evaluation.png', dpi=150, bbox_inches='tight')
+evaluate_focal_loss.py:223: UserWarning: Glyph 36827 (\N{CJK UNIFIED IDEOGRAPH-8FDB}) missing from current font.
+  plt.savefig('visualizations/focal_loss_evaluation.png', dpi=150, bbox_inches='tight')
+evaluate_focal_loss.py:223: UserWarning: Glyph 20266 (\N{CJK UNIFIED IDEOGRAPH-4F2A}) missing from current font.
+  plt.savefig('visualizations/focal_loss_evaluation.png', dpi=150, bbox_inches='tight')
+evaluate_focal_loss.py:223: UserWarning: Glyph 26631 (\N{CJK UNIFIED IDEOGRAPH-6807}) missing from current font.
+  plt.savefig('visualizations/focal_loss_evaluation.png', dpi=150, bbox_inches='tight')
+evaluate_focal_loss.py:223: UserWarning: Glyph 31614 (\N{CJK UNIFIED IDEOGRAPH-7B7E}) missing from current font.
+  plt.savefig('visualizations/focal_loss_evaluation.png', dpi=150, bbox_inches='tight')
+evaluate_focal_loss.py:223: UserWarning: Glyph 36136 (\N{CJK UNIFIED IDEOGRAPH-8D28}) missing from current font.
+  plt.savefig('visualizations/focal_loss_evaluation.png', dpi=150, bbox_inches='tight')
+evaluate_focal_loss.py:223: UserWarning: Glyph 37327 (\N{CJK UNIFIED IDEOGRAPH-91CF}) missing from current font.
+  plt.savefig('visualizations/focal_loss_evaluation.png', dpi=150, bbox_inches='tight')
+evaluate_focal_loss.py:223: UserWarning: Glyph 22826 (\N{CJK UNIFIED IDEOGRAPH-592A}) missing from current font.
+  plt.savefig('visualizations/focal_loss_evaluation.png', dpi=150, bbox_inches='tight')
+evaluate_focal_loss.py:223: UserWarning: Glyph 24046 (\N{CJK UNIFIED IDEOGRAPH-5DEE}) missing from current font.
+  plt.savefig('visualizations/focal_loss_evaluation.png', dpi=150, bbox_inches='tight')
+evaluate_focal_loss.py:223: UserWarning: Glyph 38656 (\N{CJK UNIFIED IDEOGRAPH-9700}) missing from current font.
+  plt.savefig('visualizations/focal_loss_evaluation.png', dpi=150, bbox_inches='tight')
+evaluate_focal_loss.py:223: UserWarning: Glyph 35201 (\N{CJK UNIFIED IDEOGRAPH-8981}) missing from current font.
+  plt.savefig('visualizations/focal_loss_evaluation.png', dpi=150, bbox_inches='tight')
+evaluate_focal_loss.py:223: UserWarning: Glyph 26356 (\N{CJK UNIFIED IDEOGRAPH-66F4}) missing from current font.
+  plt.savefig('visualizations/focal_loss_evaluation.png', dpi=150, bbox_inches='tight')
+evaluate_focal_loss.py:223: UserWarning: Glyph 24378 (\N{CJK UNIFIED IDEOGRAPH-5F3A}) missing from current font.
+  plt.savefig('visualizations/focal_loss_evaluation.png', dpi=150, bbox_inches='tight')
+evaluate_focal_loss.py:223: UserWarning: Glyph 30340 (\N{CJK UNIFIED IDEOGRAPH-7684}) missing from current font.
+  plt.savefig('visualizations/focal_loss_evaluation.png', dpi=150, bbox_inches='tight')
+evaluate_focal_loss.py:223: UserWarning: Glyph 30417 (\N{CJK UNIFIED IDEOGRAPH-76D1}) missing from current font.
+  plt.savefig('visualizations/focal_loss_evaluation.png', dpi=150, bbox_inches='tight')
+evaluate_focal_loss.py:223: UserWarning: Glyph 30563 (\N{CJK UNIFIED IDEOGRAPH-7763}) missing from current font.
+  plt.savefig('visualizations/focal_loss_evaluation.png', dpi=150, bbox_inches='tight')
+evaluate_focal_loss.py:223: UserWarning: Glyph 20449 (\N{CJK UNIFIED IDEOGRAPH-4FE1}) missing from current font.
+  plt.savefig('visualizations/focal_loss_evaluation.png', dpi=150, bbox_inches='tight')
+evaluate_focal_loss.py:223: UserWarning: Glyph 21495 (\N{CJK UNIFIED IDEOGRAPH-53F7}) missing from current font.
+  plt.savefig('visualizations/focal_loss_evaluation.png', dpi=150, bbox_inches='tight')
+evaluate_focal_loss.py:223: UserWarning: Glyph 22686 (\N{CJK UNIFIED IDEOGRAPH-589E}) missing from current font.
+  plt.savefig('visualizations/focal_loss_evaluation.png', dpi=150, bbox_inches='tight')
+evaluate_focal_loss.py:223: UserWarning: Glyph 22823 (\N{CJK UNIFIED IDEOGRAPH-5927}) missing from current font.
+  plt.savefig('visualizations/focal_loss_evaluation.png', dpi=150, bbox_inches='tight')
+evaluate_focal_loss.py:223: UserWarning: Glyph 20351 (\N{CJK UNIFIED IDEOGRAPH-4F7F}) missing from current font.
+  plt.savefig('visualizations/focal_loss_evaluation.png', dpi=150, bbox_inches='tight')
+evaluate_focal_loss.py:223: UserWarning: Glyph 29992 (\N{CJK UNIFIED IDEOGRAPH-7528}) missing from current font.
+  plt.savefig('visualizations/focal_loss_evaluation.png', dpi=150, bbox_inches='tight')
+evaluate_focal_loss.py:223: UserWarning: Glyph 20307 (\N{CJK UNIFIED IDEOGRAPH-4F53}) missing from current font.
+  plt.savefig('visualizations/focal_loss_evaluation.png', dpi=150, bbox_inches='tight')
+evaluate_focal_loss.py:223: UserWarning: Glyph 32032 (\N{CJK UNIFIED IDEOGRAPH-7D20}) missing from current font.
+  plt.savefig('visualizations/focal_loss_evaluation.png', dpi=150, bbox_inches='tight')
+evaluate_focal_loss.py:223: UserWarning: Glyph 32423 (\N{CJK UNIFIED IDEOGRAPH-7EA7}) missing from current font.
+  plt.savefig('visualizations/focal_loss_evaluation.png', dpi=150, bbox_inches='tight')
+evaluate_focal_loss.py:223: UserWarning: Glyph 21152 (\N{CJK UNIFIED IDEOGRAPH-52A0}) missing from current font.
+  plt.savefig('visualizations/focal_loss_evaluation.png', dpi=150, bbox_inches='tight')
+evaluate_focal_loss.py:223: UserWarning: Glyph 24322 (\N{CJK UNIFIED IDEOGRAPH-5F02}) missing from current font.
+  plt.savefig('visualizations/focal_loss_evaluation.png', dpi=150, bbox_inches='tight')
+evaluate_focal_loss.py:223: UserWarning: Glyph 24120 (\N{CJK UNIFIED IDEOGRAPH-5E38}) missing from current font.
+  plt.savefig('visualizations/focal_loss_evaluation.png', dpi=150, bbox_inches='tight')
+evaluate_focal_loss.py:223: UserWarning: Glyph 26679 (\N{CJK UNIFIED IDEOGRAPH-6837}) missing from current font.
+  plt.savefig('visualizations/focal_loss_evaluation.png', dpi=150, bbox_inches='tight')
+evaluate_focal_loss.py:223: UserWarning: Glyph 26412 (\N{CJK UNIFIED IDEOGRAPH-672C}) missing from current font.
+  plt.savefig('visualizations/focal_loss_evaluation.png', dpi=150, bbox_inches='tight')
+evaluate_focal_loss.py:223: UserWarning: Glyph 26435 (\N{CJK UNIFIED IDEOGRAPH-6743}) missing from current font.
+  plt.savefig('visualizations/focal_loss_evaluation.png', dpi=150, bbox_inches='tight')
+evaluate_focal_loss.py:223: UserWarning: Glyph 37325 (\N{CJK UNIFIED IDEOGRAPH-91CD}) missing from current font.
+  plt.savefig('visualizations/focal_loss_evaluation.png', dpi=150, bbox_inches='tight')
+
+✅ Focal Loss模型结果:
+   Accuracy:  0.9031
+   Precision: 0.0000
+   Recall:    0.0000
+   F1:        0.0000
+   AUROC:     0.5148
+   AUPRC:     0.1025
+
+   Confusion Matrix:
+   TP:      0  FP:      0
+   FN:    407  TN:   3793
+
+📊 之前的BCE Loss模型结果:
+   Accuracy:  0.9012
+   Precision: 0.0000
+   Recall:    0.0000
+   F1:        0.0000
+   AUROC:     0.4979
+   AUPRC:     0.0983
+
+======================================================================
+📈 对比分析
+======================================================================
+
+关键指标变化:
+  AUROC:  0.4979 → 0.5148 (+0.0169)
+  Recall: 0.0000 → 0.0000 (+0.0000)
+  TP:     0 → 0
+
+❌ 结论: Focal Loss未能解决问题！
+   模型仍在'投机取巧' - 永远预测正常
+
+根本原因:
+   1. 伪标签质量太差（场景级 vs 体素级）
+   2. Focal Loss参数可能不够激进
+   3. 需要更强的监督信号
+
+📊 生成对比可视化...
+✅ 对比可视化保存至: visualizations/focal_loss_evaluation.png
+
+======================================================================
+🎉 评估完成！
+======================================================================

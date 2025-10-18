@@ -133,14 +133,16 @@ class AnoVoxDataset(Dataset):
                 if self.load_voxel:
                     voxel_dir = scenario_path / "VOXEL_GRID"
                     if voxel_dir.exists():
-                        voxel_files = list(voxel_dir.glob(f"*_{frame_id}.npz"))
+                        # AnoVox体素文件是.npy格式，不是.npz
+                        voxel_files = list(voxel_dir.glob(f"*_{frame_id}.npy"))
                         if len(voxel_files) > 0:
                             voxel_file = voxel_files[0]
                 
                 if self.load_anomaly_labels:
                     anomaly_dir = scenario_path / "ANOMALY"
                     if anomaly_dir.exists():
-                        anomaly_files = list(anomaly_dir.glob(f"*_{frame_id}.json"))
+                        # AnoVox使用CSV格式存储异常标签
+                        anomaly_files = list(anomaly_dir.glob(f"ANOMALY_{frame_id}.csv"))
                         if len(anomaly_files) > 0:
                             anomaly_file = anomaly_files[0]
                 
@@ -209,13 +211,17 @@ class AnoVoxDataset(Dataset):
         if self.load_voxel and sample_info['voxel_path'] is not None:
             try:
                 voxel_data = np.load(sample_info['voxel_path'])
-                # AnoVox体素格式可能是 'voxel_grid' 或 'occupancy'
-                if 'voxel_grid' in voxel_data:
-                    voxel = voxel_data['voxel_grid']
-                elif 'occupancy' in voxel_data:
-                    voxel = voxel_data['occupancy']
-                else:
-                    voxel = voxel_data[voxel_data.files[0]]  # 取第一个数组
+                # AnoVox体素格式：直接numpy数组 [N, 4] (vx, vy, vz, semantic_id)
+                if isinstance(voxel_data, np.ndarray):
+                    voxel = voxel_data
+                # 或者是npz文件
+                elif hasattr(voxel_data, 'files'):
+                    if 'voxel_grid' in voxel_data:
+                        voxel = voxel_data['voxel_grid']
+                    elif 'occupancy' in voxel_data:
+                        voxel = voxel_data['occupancy']
+                    else:
+                        voxel = voxel_data[voxel_data.files[0]]  # 取第一个数组
             except Exception as e:
                 print(f"[Warning] 加载体素失败: {e}")
         
@@ -223,8 +229,15 @@ class AnoVoxDataset(Dataset):
         anomaly_label = None
         if self.load_anomaly_labels and sample_info['anomaly_path'] is not None:
             try:
+                # AnoVox使用CSV格式: 每行 "key ; value"
+                anomaly_data = {}
                 with open(sample_info['anomaly_path'], 'r') as f:
-                    anomaly_label = json.load(f)
+                    for line in f:
+                        line = line.strip()
+                        if ' ; ' in line:
+                            key, value = line.split(' ; ', 1)
+                            anomaly_data[key.strip()] = value.strip()
+                anomaly_label = anomaly_data if anomaly_data else None
             except Exception as e:
                 print(f"[Warning] 加载异常标注失败: {e}")
         
@@ -244,7 +257,8 @@ class AnoVoxDataset(Dataset):
         
         # 添加体素数据
         if voxel is not None:
-            batch['voxel'] = torch.from_numpy(voxel).float()
+            # 转换uint16到int32（PyTorch支持的类型）
+            batch['voxel'] = torch.from_numpy(voxel.astype(np.int32))
         
         # 添加异常标注
         if anomaly_label is not None:
@@ -296,7 +310,8 @@ def collate_fn(batch):
     
     # 可选字段
     if 'voxel' in batch[0]:
-        result['voxel'] = torch.stack([item['voxel'] for item in batch])
+        # 体素是稀疏的，每个样本大小不同，保持为列表
+        result['voxel'] = [item['voxel'] for item in batch]
     
     if 'anomaly_label' in batch[0]:
         result['anomaly_label'] = [item['anomaly_label'] for item in batch]
