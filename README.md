@@ -1,6 +1,21 @@
 # MUVO: 跨模态注意力融合的自动驾驶异常检测系统
 # MUVO: Cross-Modal Attention Fusion for Autonomous Driving Anomaly Detection
 
+> **📍 项目状态**: 数据准备✅完成 | 模型实现🔄进行中  
+> **📅 最后更新**: 2025-10-18  
+> **🎯 目标**: 基于AnoVox数据集，实现跨模态注意力融合的道路异常检测
+
+---
+
+## 📚 快速导航
+
+- **新手开始**: 请先阅读 [`快速开始.md`](./快速开始.md)
+- **技术方案**: 查看 [`技术方案实施指南.md`](./技术方案实施指南.md)
+- **项目现状**: 参考 [`项目现状总结.md`](./项目现状总结.md)
+- **数据集说明**: 使用 [`muvo/dataset/anovox_dataset.py`](./muvo/dataset/anovox_dataset.py)
+
+---
+
 ## 🚀 核心创新 (Core Innovation)
 
 本项目在原有MUVO基础上实现了**跨模态注意力融合的异常检测系统**，主要创新点包括：
