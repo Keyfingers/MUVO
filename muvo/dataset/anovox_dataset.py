@@ -261,6 +261,49 @@ class AnoVoxDataset(Dataset):
         return self.samples[idx]
 
 
+def collate_fn(batch):
+    """
+    自定义collate函数 - 处理不同大小的点云
+    """
+    import torch
+    
+    # 分离不同类型的数据
+    images = torch.stack([item['image'] for item in batch])
+    
+    # 点云需要填充到相同大小
+    points_list = [item['points'] for item in batch]
+    max_points = max([p.shape[0] for p in points_list])
+    
+    # 填充点云
+    padded_points = []
+    for points in points_list:
+        if points.shape[0] < max_points:
+            # 填充零向量
+            padding = torch.zeros((max_points - points.shape[0], points.shape[1]))
+            points = torch.cat([points, padding], dim=0)
+        padded_points.append(points)
+    
+    points = torch.stack(padded_points)
+    
+    # 其他元数据
+    result = {
+        'image': images,
+        'points': points,
+        'scenario': [item['scenario'] for item in batch],
+        'frame_id': [item['frame_id'] for item in batch],
+        'town': [item['town'] for item in batch],
+    }
+    
+    # 可选字段
+    if 'voxel' in batch[0]:
+        result['voxel'] = torch.stack([item['voxel'] for item in batch])
+    
+    if 'anomaly_label' in batch[0]:
+        result['anomaly_label'] = [item['anomaly_label'] for item in batch]
+    
+    return result
+
+
 def create_anovox_dataloader(
     data_root: str,
     split: str = 'train',
@@ -297,7 +340,8 @@ def create_anovox_dataloader(
         shuffle=shuffle,
         num_workers=num_workers,
         pin_memory=True,
-        drop_last=(split == 'train')
+        drop_last=(split == 'train'),
+        collate_fn=collate_fn  # 使用自定义collate函数
     )
     
     return dataloader

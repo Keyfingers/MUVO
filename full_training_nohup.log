@@ -1,0 +1,45 @@
+nohup: ignoring input
+============================================================
+🚀 开始完整的AnoVox异常检测训练
+============================================================
+
+📊 训练配置:
+   - 模型: MileAnomalyDetection (跨模态注意力融合)
+   - 数据集: AnoVox (4200样本)
+   - Epochs: 50
+   - Batch Size: 4
+   - GPU: RTX 4090
+   - 预计时间: 8-12小时
+
+💡 监控方式:
+   1. 实时日志: tail -f full_training.log
+   2. TensorBoard: tensorboard --logdir lightning_logs
+   3. GPU监控: watch -n 1 nvidia-smi
+
+============================================================
+
+============================================================
+🚀 AnoVox异常检测训练启动
+============================================================
+Traceback (most recent call last):
+  File "train_anovox.py", line 407, in <module>
+    main()
+  File "train_anovox.py", line 274, in main
+    cfg.merge_from_file(args.config)
+  File "/root/miniconda3/lib/python3.8/site-packages/fvcore/common/config.py", line 121, in merge_from_file
+    self.merge_from_other_cfg(loaded_cfg)
+  File "/root/miniconda3/lib/python3.8/site-packages/fvcore/common/config.py", line 132, in merge_from_other_cfg
+    return super().merge_from_other_cfg(cfg_other)
+  File "/root/miniconda3/lib/python3.8/site-packages/yacs/config.py", line 217, in merge_from_other_cfg
+    _merge_a_into_b(cfg_other, self, self, [])
+  File "/root/miniconda3/lib/python3.8/site-packages/yacs/config.py", line 478, in _merge_a_into_b
+    _merge_a_into_b(v, b[k], root, key_list + [k])
+  File "/root/miniconda3/lib/python3.8/site-packages/yacs/config.py", line 478, in _merge_a_into_b
+    _merge_a_into_b(v, b[k], root, key_list + [k])
+  File "/root/miniconda3/lib/python3.8/site-packages/yacs/config.py", line 491, in _merge_a_into_b
+    raise KeyError("Non-existent config key: {}".format(full_key))
+KeyError: 'Non-existent config key: MODEL.ENCODER.PRETRAINED'
+
+============================================================
+🎉 训练完成！
+============================================================

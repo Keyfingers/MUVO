@@ -1,0 +1,77 @@
+# AnoVox异常检测训练配置
+# Configuration for AnoVox Anomaly Detection Training
+
+# 数据集配置
+DATASET:
+  DATAROOT: '/root/autodl-tmp/datasets/AnoVox/AnoVox_Dynamic_Mono_Town07'
+  FILTER_NORM_REWARD: 0.0  # 不过滤数据
+  FILTER_BEGINNING_OF_RUN_SEC: 0.0
+
+# 批次大小
+BATCHSIZE: 2
+N_WORKERS: 4
+
+# GPU设置
+GPUS: 1
+
+# 模型配置
+MODEL:
+  # 图像编码器
+  ENCODER:
+    NAME: 'resnet18'
+    PRETRAINED: True
+    OUT_CHANNELS: 512
+  
+  # 点云配置
+  LIDAR:
+    ENABLED: True
+    ENCODER: 'resnet18'
+    OUT_CHANNELS: 512
+    
+    POINT_PILLAR:
+      ENABLED: True
+  
+  # Transformer配置
+  TRANSFORMER:
+    ENABLED: True
+    CHANNELS: 64
+    LARGE: False
+  
+  # 异常检测配置
+  ANOMALY_DETECTION:
+    ENABLED: True
+    FREEZE_BACKBONE: True  # 冻结骨干网络
+    
+    # 检测头类型: '3dcnn', 'mlp', 'multiscale'
+    HEAD_TYPE: '3dcnn'
+    OUTPUT_DIM: 1
+    HIDDEN_DIM: 128
+    NUM_HEADS: 8
+    DROPOUT: 0.1
+    
+    # 位置编码配置
+    POSITIONAL_ENCODING:
+      ENABLED: True
+      TYPE: 'sincos'  # 'sincos', 'learned', 'hybrid'
+    
+    # 特征对齐配置
+    FEATURE_ALIGNMENT:
+      METHOD: 'bilinear'  # 'nearest', 'bilinear', 'network'
+      USE_ALIGNMENT_NETWORK: True
+
+# 体素配置
+VOXEL:
+  SIZE: [192, 192, 64]  # X, Y, Z
+
+# 优化器配置
+OPTIMIZER:
+  LR: 0.0001  # 学习率
+  WEIGHT_DECAY: 0.0001
+
+# 接收域
+RECEPTIVE_FIELD: 1
+
+# 其他配置
+STEPS: 100000
+VAL_CHECK_INTERVAL: 500
+

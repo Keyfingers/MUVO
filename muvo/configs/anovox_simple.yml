@@ -1,0 +1,44 @@
+# AnoVox简化训练配置
+# Simplified Training Configuration for AnoVox
+
+# 数据集
+DATASET:
+  DATAROOT: '/root/autodl-tmp/datasets/AnoVox/AnoVox_Dynamic_Mono_Town07'
+  FILTER_NORM_REWARD: 0.0
+  FILTER_BEGINNING_OF_RUN_SEC: 0.0
+
+# 训练参数
+BATCHSIZE: 4
+N_WORKERS: 4
+GPUS: 1
+
+# 优化器
+OPTIMIZER:
+  LR: 0.0001
+  WEIGHT_DECAY: 0.0001
+
+# 模型
+MODEL:
+  ENCODER:
+    NAME: 'resnet18'
+    OUT_CHANNELS: 512
+  
+  LIDAR:
+    ENABLED: True
+    ENCODER: 'resnet18'
+    OUT_CHANNELS: 512
+    POINT_PILLAR:
+      ENABLED: True
+  
+  TRANSFORMER:
+    ENABLED: True
+    CHANNELS: 64
+    LARGE: False
+
+# 接收域
+RECEPTIVE_FIELD: 1
+
+# 其他
+STEPS: 100000
+VAL_CHECK_INTERVAL: 500
+
