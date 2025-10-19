@@ -37,6 +37,8 @@ class AnoVoxDataset(Dataset):
         self,
         data_root: str,
         split: str = 'train',
+        dataset_types: List[str] = None,
+        train_ratio: float = 0.8,
         sequence_length: int = 1,
         transform=None,
         load_voxel: bool = True,
@@ -46,6 +48,8 @@ class AnoVoxDataset(Dataset):
         Args:
             data_root: AnoVox数据集根目录
             split: 'train' 或 'val' 或 'test'
+            dataset_types: 数据集类型列表，如['Dynamic_Mono_Town07', 'Normality_Mono_Town07']
+            train_ratio: 训练集比例（用于划分train/val）
             sequence_length: 时间序列长度（目前支持单帧=1）
             transform: 数据增强
             load_voxel: 是否加载体素数据
@@ -53,10 +57,20 @@ class AnoVoxDataset(Dataset):
         """
         self.data_root = Path(data_root)
         self.split = split
+        self.train_ratio = train_ratio
         self.sequence_length = sequence_length
         self.transform = transform
         self.load_voxel = load_voxel
         self.load_anomaly_labels = load_anomaly_labels
+        
+        # 确定使用哪些数据集类型
+        if dataset_types is None:
+            # 默认配置：同时使用正常和异常场景
+            if split in ['train', 'val']:
+                dataset_types = ['Dynamic_Mono_Town07', 'Normality_Mono_Town07']
+            elif split == 'test':
+                dataset_types = ['Dynamic_Mono_Town07']  # 测试集只用异常
+        self.dataset_types = dataset_types
         
         # 扫描所有场景
         self.scenarios = self._scan_scenarios()
@@ -64,16 +78,35 @@ class AnoVoxDataset(Dataset):
         # 构建样本索引
         self.samples = self._build_sample_index()
         
-        print(f"[AnoVoxDataset] 加载 {split} 集: {len(self.scenarios)} 场景, {len(self.samples)} 样本")
+        print(f"[AnoVoxDataset] 加载 {split} 集 (Types: {dataset_types}): {len(self.scenarios)} 场景, {len(self.samples)} 样本")
     
     def _scan_scenarios(self) -> List[Path]:
         """扫描数据集中的所有场景文件夹"""
         scenarios = []
         
-        # AnoVox数据集通常按Town组织
-        for scenario_dir in sorted(self.data_root.glob("Scenario_*")):
-            if scenario_dir.is_dir():
-                scenarios.append(scenario_dir)
+        # 扫描指定的数据集类型目录
+        for dataset_type in self.dataset_types:
+            dataset_dir = self.data_root / f"AnoVox_{dataset_type}"
+            if not dataset_dir.exists():
+                print(f"[Warning] 数据集目录不存在: {dataset_dir}")
+                continue
+            
+            # 扫描该类型下的所有场景
+            for scenario_dir in sorted(dataset_dir.glob("Scenario_*")):
+                if scenario_dir.is_dir():
+                    scenarios.append(scenario_dir)
+        
+        # 按train_ratio划分train/val
+        if self.split in ['train', 'val']:
+            # 对场景ID排序确保可重现性
+            scenarios = sorted(scenarios)
+            n_total = len(scenarios)
+            n_train = int(n_total * self.train_ratio)
+            
+            if self.split == 'train':
+                scenarios = scenarios[:n_train]
+            elif self.split == 'val':
+                scenarios = scenarios[n_train:]
         
         return scenarios
     
@@ -261,8 +294,12 @@ class AnoVoxDataset(Dataset):
             batch['voxel'] = torch.from_numpy(voxel.astype(np.int32))
         
         # 添加异常标注
+        # 如果没有anomaly文件，说明是正常场景(Normality数据集)
         if anomaly_label is not None:
             batch['anomaly_label'] = anomaly_label
+        else:
+            # Normality场景: 无anomaly文件 → 正常场景
+            batch['anomaly_label'] = {'anomaly_is_alive': 'False'}
         
         # 应用数据增强
         if self.transform is not None:

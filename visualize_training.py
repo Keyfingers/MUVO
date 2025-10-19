@@ -1,298 +1,282 @@
 """
-训练可视化脚本
-实时监控训练进度和生成可视化结果
+训练过程可视化脚本
+生成Loss曲线、Accuracy/Recall曲线、混淆矩阵等图表
 """
 
-import os
-import time
-import argparse
-from pathlib import Path
-import matplotlib
-matplotlib.use('Agg')
+import re
 import matplotlib.pyplot as plt
+import seaborn as sns
 import numpy as np
-from tensorboard.backend.event_processing import event_accumulator
+from pathlib import Path
 
+# 设置中文字体和样式
+plt.rcParams['font.sans-serif'] = ['DejaVu Sans']
+plt.rcParams['axes.unicode_minus'] = False
+sns.set_style("whitegrid")
+sns.set_palette("husl")
 
-def plot_training_curves(log_dir, save_dir='visualizations'):
-    """
-    绘制训练曲线
-    """
-    save_dir = Path(save_dir)
-    save_dir.mkdir(exist_ok=True)
+def parse_training_log(log_file):
+    """解析训练日志"""
+    epochs = []
+    losses = []
+    accuracies = []
+    precisions = []
+    recalls = []
+    f1_scores = []
     
-    # 查找最新的事件文件
-    log_path = Path(log_dir)
-    event_files = list(log_path.rglob('events.out.tfevents.*'))
+    # 混淆矩阵数据
+    tps = []
+    fps = []
+    fns = []
+    tns = []
     
-    if not event_files:
-        print(f"⚠️ 未找到TensorBoard日志文件: {log_dir}")
-        return
+    with open(log_file, 'r', encoding='utf-8') as f:
+        content = f.read()
     
-    # 使用最新的事件文件
-    latest_event = max(event_files, key=lambda p: p.stat().st_mtime)
-    print(f"📊 读取日志: {latest_event}")
+    # 提取每个epoch的Summary信息
+    pattern = r'Epoch (\d+).*?Summary:.*?Loss: ([\d.]+).*?Accuracy: ([\d.]+)%.*?Precision: ([\d.]+)%.*?Recall: ([\d.]+)%.*?F1-Score: ([\d.]+)%.*?TP: (\d+), FP: (\d+), FN: (\d+), TN: (\d+)'
     
-    # 加载事件
-    ea = event_accumulator.EventAccumulator(str(latest_event.parent))
-    ea.Reload()
+    matches = re.finditer(pattern, content, re.DOTALL)
     
-    # 获取可用的标量
-    scalar_tags = ea.Tags()['scalars']
-    print(f"✅ 可用指标: {scalar_tags}")
+    for match in matches:
+        epoch = int(match.group(1))
+        loss = float(match.group(2))
+        acc = float(match.group(3))
+        prec = float(match.group(4))
+        rec = float(match.group(5))
+        f1 = float(match.group(6))
+        tp = int(match.group(7))
+        fp = int(match.group(8))
+        fn = int(match.group(9))
+        tn = int(match.group(10))
+        
+        epochs.append(epoch)
+        losses.append(loss)
+        accuracies.append(acc)
+        precisions.append(prec)
+        recalls.append(rec)
+        f1_scores.append(f1)
+        tps.append(tp)
+        fps.append(fp)
+        fns.append(fn)
+        tns.append(tn)
     
-    # 创建图表
-    fig, axes = plt.subplots(2, 2, figsize=(15, 12))
-    fig.suptitle('AnoVox Anomaly Detection Training Progress', fontsize=16, fontweight='bold')
+    return {
+        'epochs': epochs,
+        'losses': losses,
+        'accuracies': accuracies,
+        'precisions': precisions,
+        'recalls': recalls,
+        'f1_scores': f1_scores,
+        'tps': tps,
+        'fps': fps,
+        'fns': fns,
+        'tns': tns
+    }
+
+def plot_training_curves(data, output_dir):
+    """绘制训练曲线"""
+    output_dir = Path(output_dir)
+    output_dir.mkdir(exist_ok=True)
     
-    # 1. 训练和验证损失
-    ax = axes[0, 0]
-    if 'train_loss_epoch' in scalar_tags:
-        train_loss = [(s.step, s.value) for s in ea.Scalars('train_loss_epoch')]
-        steps, values = zip(*train_loss)
-        ax.plot(steps, values, 'b-', label='Train Loss', linewidth=2)
+    # 1. Loss曲线
+    plt.figure(figsize=(10, 6))
+    plt.plot(data['epochs'], data['losses'], 'b-', linewidth=2, marker='o', markersize=4)
+    plt.xlabel('Epoch', fontsize=14, fontweight='bold')
+    plt.ylabel('Loss', fontsize=14, fontweight='bold')
+    plt.title('Training Loss Curve', fontsize=16, fontweight='bold')
+    plt.grid(True, alpha=0.3)
+    plt.tight_layout()
+    plt.savefig(output_dir / 'loss_curve.png', dpi=300, bbox_inches='tight')
+    plt.close()
+    print(f"✅ Loss曲线已保存: {output_dir / 'loss_curve.png'}")
     
-    if 'val_loss' in scalar_tags:
-        val_loss = [(s.step, s.value) for s in ea.Scalars('val_loss')]
-        steps, values = zip(*val_loss)
-        ax.plot(steps, values, 'r-', label='Val Loss', linewidth=2)
+    # 2. Accuracy/Recall/Precision曲线
+    plt.figure(figsize=(12, 6))
+    plt.plot(data['epochs'], data['accuracies'], 'b-', linewidth=2, marker='o', markersize=4, label='Accuracy')
+    plt.plot(data['epochs'], data['recalls'], 'r-', linewidth=2, marker='s', markersize=4, label='Recall')
+    plt.plot(data['epochs'], data['precisions'], 'g-', linewidth=2, marker='^', markersize=4, label='Precision')
+    plt.plot(data['epochs'], data['f1_scores'], 'm-', linewidth=2, marker='d', markersize=4, label='F1-Score')
+    plt.xlabel('Epoch', fontsize=14, fontweight='bold')
+    plt.ylabel('Percentage (%)', fontsize=14, fontweight='bold')
+    plt.title('Training Metrics Over Epochs', fontsize=16, fontweight='bold')
+    plt.legend(fontsize=12, loc='lower right')
+    plt.grid(True, alpha=0.3)
+    plt.ylim([70, 101])
+    plt.tight_layout()
+    plt.savefig(output_dir / 'metrics_curve.png', dpi=300, bbox_inches='tight')
+    plt.close()
+    print(f"✅ 指标曲线已保存: {output_dir / 'metrics_curve.png'}")
     
-    ax.set_xlabel('Epoch', fontsize=12)
-    ax.set_ylabel('Loss', fontsize=12)
-    ax.set_title('Training & Validation Loss', fontsize=14, fontweight='bold')
-    ax.legend(fontsize=10)
-    ax.grid(True, alpha=0.3)
+    # 3. 最终混淆矩阵 (使用最后一个epoch的数据)
+    plt.figure(figsize=(8, 6))
+    tp, fp, fn, tn = data['tps'][-1], data['fps'][-1], data['fns'][-1], data['tns'][-1]
+    cm = np.array([[tn, fp], [fn, tp]])
     
-    # 2. 异常概率
-    ax = axes[0, 1]
-    if 'train_anomaly_prob' in scalar_tags:
-        train_prob = [(s.step, s.value) for s in ea.Scalars('train_anomaly_prob')]
-        steps, values = zip(*train_prob)
-        ax.plot(steps, values, 'g-', label='Train Anomaly Prob', linewidth=2)
+    sns.heatmap(cm, annot=True, fmt='d', cmap='Blues', cbar=True,
+                xticklabels=['Predicted Normal', 'Predicted Anomaly'],
+                yticklabels=['Actual Normal', 'Actual Anomaly'],
+                annot_kws={'size': 16, 'weight': 'bold'})
+    plt.title('Final Confusion Matrix (Epoch 30)', fontsize=16, fontweight='bold')
+    plt.ylabel('True Label', fontsize=14, fontweight='bold')
+    plt.xlabel('Predicted Label', fontsize=14, fontweight='bold')
+    plt.tight_layout()
+    plt.savefig(output_dir / 'confusion_matrix.png', dpi=300, bbox_inches='tight')
+    plt.close()
+    print(f"✅ 混淆矩阵已保存: {output_dir / 'confusion_matrix.png'}")
     
-    if 'val_anomaly_prob' in scalar_tags:
-        val_prob = [(s.step, s.value) for s in ea.Scalars('val_anomaly_prob')]
-        steps, values = zip(*val_prob)
-        ax.plot(steps, values, 'm-', label='Val Anomaly Prob', linewidth=2)
+    # 4. TP/FP/FN/TN随时间变化
+    plt.figure(figsize=(12, 6))
+    plt.plot(data['epochs'], data['tps'], 'g-', linewidth=2, marker='o', label='True Positive (TP)')
+    plt.plot(data['epochs'], data['tns'], 'b-', linewidth=2, marker='s', label='True Negative (TN)')
+    plt.plot(data['epochs'], data['fps'], 'r-', linewidth=2, marker='^', label='False Positive (FP)')
+    plt.plot(data['epochs'], data['fns'], 'm-', linewidth=2, marker='d', label='False Negative (FN)')
+    plt.xlabel('Epoch', fontsize=14, fontweight='bold')
+    plt.ylabel('Count', fontsize=14, fontweight='bold')
+    plt.title('Confusion Matrix Components Over Epochs', fontsize=16, fontweight='bold')
+    plt.legend(fontsize=12)
+    plt.grid(True, alpha=0.3)
+    plt.tight_layout()
+    plt.savefig(output_dir / 'confusion_components.png', dpi=300, bbox_inches='tight')
+    plt.close()
+    print(f"✅ 混淆矩阵组件图已保存: {output_dir / 'confusion_components.png'}")
     
-    ax.set_xlabel('Step', fontsize=12)
-    ax.set_ylabel('Anomaly Probability', fontsize=12)
-    ax.set_title('Anomaly Detection Probability', fontsize=14, fontweight='bold')
-    ax.legend(fontsize=10)
-    ax.grid(True, alpha=0.3)
+    # 5. 综合对比图 (2x2布局)
+    fig, axes = plt.subplots(2, 2, figsize=(16, 12))
     
-    # 3. 学习率
-    ax = axes[1, 0]
-    if 'lr-AdamW' in scalar_tags:
-        lr_data = [(s.step, s.value) for s in ea.Scalars('lr-AdamW')]
-        steps, values = zip(*lr_data)
-        ax.plot(steps, values, 'orange', linewidth=2)
-        ax.set_xlabel('Epoch', fontsize=12)
-        ax.set_ylabel('Learning Rate', fontsize=12)
-        ax.set_title('Learning Rate Schedule', fontsize=14, fontweight='bold')
-        ax.grid(True, alpha=0.3)
-        ax.set_yscale('log')
+    # 左上: Loss
+    axes[0, 0].plot(data['epochs'], data['losses'], 'b-', linewidth=2, marker='o')
+    axes[0, 0].set_xlabel('Epoch', fontsize=12, fontweight='bold')
+    axes[0, 0].set_ylabel('Loss', fontsize=12, fontweight='bold')
+    axes[0, 0].set_title('Training Loss', fontsize=14, fontweight='bold')
+    axes[0, 0].grid(True, alpha=0.3)
     
-    # 4. 训练步损失（详细）
-    ax = axes[1, 1]
-    if 'train_loss_step' in scalar_tags:
-        train_loss_step = [(s.step, s.value) for s in ea.Scalars('train_loss_step')]
-        steps, values = zip(*train_loss_step)
-        # 使用移动平均平滑曲线
-        window = min(50, len(values) // 10)
-        if window > 0:
-            smoothed = np.convolve(values, np.ones(window)/window, mode='valid')
-            ax.plot(steps[:len(smoothed)], smoothed, 'b-', linewidth=2, alpha=0.7)
-        ax.set_xlabel('Training Step', fontsize=12)
-        ax.set_ylabel('Loss', fontsize=12)
-        ax.set_title('Training Loss (Smoothed)', fontsize=14, fontweight='bold')
-        ax.grid(True, alpha=0.3)
+    # 右上: Accuracy & Recall
+    axes[0, 1].plot(data['epochs'], data['accuracies'], 'b-', linewidth=2, marker='o', label='Accuracy')
+    axes[0, 1].plot(data['epochs'], data['recalls'], 'r-', linewidth=2, marker='s', label='Recall')
+    axes[0, 1].set_xlabel('Epoch', fontsize=12, fontweight='bold')
+    axes[0, 1].set_ylabel('Percentage (%)', fontsize=12, fontweight='bold')
+    axes[0, 1].set_title('Accuracy & Recall', fontsize=14, fontweight='bold')
+    axes[0, 1].legend(fontsize=10)
+    axes[0, 1].grid(True, alpha=0.3)
+    axes[0, 1].set_ylim([70, 101])
+    
+    # 左下: Precision & F1
+    axes[1, 0].plot(data['epochs'], data['precisions'], 'g-', linewidth=2, marker='^', label='Precision')
+    axes[1, 0].plot(data['epochs'], data['f1_scores'], 'm-', linewidth=2, marker='d', label='F1-Score')
+    axes[1, 0].set_xlabel('Epoch', fontsize=12, fontweight='bold')
+    axes[1, 0].set_ylabel('Percentage (%)', fontsize=12, fontweight='bold')
+    axes[1, 0].set_title('Precision & F1-Score', fontsize=14, fontweight='bold')
+    axes[1, 0].legend(fontsize=10)
+    axes[1, 0].grid(True, alpha=0.3)
+    axes[1, 0].set_ylim([70, 101])
+    
+    # 右下: 混淆矩阵
+    cm = np.array([[tn, fp], [fn, tp]])
+    sns.heatmap(cm, annot=True, fmt='d', cmap='Blues', cbar=True, ax=axes[1, 1],
+                xticklabels=['Normal', 'Anomaly'],
+                yticklabels=['Normal', 'Anomaly'],
+                annot_kws={'size': 14, 'weight': 'bold'})
+    axes[1, 1].set_title('Final Confusion Matrix', fontsize=14, fontweight='bold')
+    axes[1, 1].set_ylabel('True', fontsize=12, fontweight='bold')
+    axes[1, 1].set_xlabel('Predicted', fontsize=12, fontweight='bold')
     
     plt.tight_layout()
-    
-    # 保存图像
-    save_path = save_dir / 'training_curves.png'
-    plt.savefig(save_path, dpi=150, bbox_inches='tight')
-    print(f"✅ 训练曲线保存至: {save_path}")
+    plt.savefig(output_dir / 'training_summary.png', dpi=300, bbox_inches='tight')
     plt.close()
-    
-    # 生成统计报告
-    generate_stats_report(ea, scalar_tags, save_dir)
+    print(f"✅ 综合汇总图已保存: {output_dir / 'training_summary.png'}")
 
-
-def generate_stats_report(ea, scalar_tags, save_dir):
+def generate_statistics_report(data, output_dir):
     """生成统计报告"""
-    report_path = save_dir / 'training_stats.txt'
+    output_dir = Path(output_dir)
     
-    with open(report_path, 'w', encoding='utf-8') as f:
-        f.write("=" * 60 + "\n")
-        f.write("AnoVox异常检测训练统计报告\n")
-        f.write("=" * 60 + "\n\n")
-        
-        # 训练损失统计
-        if 'train_loss_epoch' in scalar_tags:
-            train_loss = [s.value for s in ea.Scalars('train_loss_epoch')]
-            f.write(f"📊 训练损失 (Train Loss):\n")
-            f.write(f"   - 初始: {train_loss[0]:.4f}\n")
-            f.write(f"   - 最终: {train_loss[-1]:.4f}\n")
-            f.write(f"   - 最小: {min(train_loss):.4f}\n")
-            f.write(f"   - 平均: {np.mean(train_loss):.4f}\n")
-            f.write(f"   - 改善: {((train_loss[0] - train_loss[-1]) / train_loss[0] * 100):.1f}%\n\n")
-        
-        # 验证损失统计
-        if 'val_loss' in scalar_tags:
-            val_loss = [s.value for s in ea.Scalars('val_loss')]
-            f.write(f"📊 验证损失 (Validation Loss):\n")
-            f.write(f"   - 初始: {val_loss[0]:.4f}\n")
-            f.write(f"   - 最终: {val_loss[-1]:.4f}\n")
-            f.write(f"   - 最小: {min(val_loss):.4f}\n")
-            f.write(f"   - 平均: {np.mean(val_loss):.4f}\n")
-            f.write(f"   - 改善: {((val_loss[0] - val_loss[-1]) / val_loss[0] * 100):.1f}%\n\n")
-        
-        # 异常概率统计
-        if 'train_anomaly_prob' in scalar_tags:
-            train_prob = [s.value for s in ea.Scalars('train_anomaly_prob')]
-            f.write(f"📊 异常概率 (Anomaly Probability):\n")
-            f.write(f"   - 训练集平均: {np.mean(train_prob):.4f}\n")
-        
-        if 'val_anomaly_prob' in scalar_tags:
-            val_prob = [s.value for s in ea.Scalars('val_anomaly_prob')]
-            f.write(f"   - 验证集平均: {np.mean(val_prob):.4f}\n\n")
-        
-        f.write("=" * 60 + "\n")
+    report = []
+    report.append("=" * 80)
+    report.append("🎯 训练统计报告")
+    report.append("=" * 80)
+    report.append("")
     
-    print(f"✅ 统计报告保存至: {report_path}")
+    # 基本信息
+    report.append(f"📊 训练轮数: {len(data['epochs'])} epochs")
+    report.append(f"📈 初始性能 (Epoch {data['epochs'][0]}):")
+    report.append(f"   - Accuracy: {data['accuracies'][0]:.2f}%")
+    report.append(f"   - Recall: {data['recalls'][0]:.2f}%")
+    report.append(f"   - Loss: {data['losses'][0]:.4f}")
+    report.append("")
     
-    # 打印到控制台
-    with open(report_path, 'r', encoding='utf-8') as f:
-        print(f.read())
+    # 最终性能
+    report.append(f"🏆 最终性能 (Epoch {data['epochs'][-1]}):")
+    report.append(f"   - Accuracy: {data['accuracies'][-1]:.2f}%")
+    report.append(f"   - Precision: {data['precisions'][-1]:.2f}%")
+    report.append(f"   - Recall: {data['recalls'][-1]:.2f}%")
+    report.append(f"   - F1-Score: {data['f1_scores'][-1]:.2f}%")
+    report.append(f"   - Loss: {data['losses'][-1]:.4f}")
+    report.append("")
+    
+    # 性能提升
+    acc_improvement = data['accuracies'][-1] - data['accuracies'][0]
+    rec_improvement = data['recalls'][-1] - data['recalls'][0]
+    report.append(f"📈 性能提升:")
+    report.append(f"   - Accuracy: +{acc_improvement:.2f}%")
+    report.append(f"   - Recall: +{rec_improvement:.2f}%")
+    report.append("")
+    
+    # 最佳性能
+    best_acc_idx = np.argmax(data['accuracies'])
+    best_rec_idx = np.argmax(data['recalls'])
+    best_f1_idx = np.argmax(data['f1_scores'])
+    
+    report.append(f"🌟 最佳指标:")
+    report.append(f"   - 最高Accuracy: {data['accuracies'][best_acc_idx]:.2f}% (Epoch {data['epochs'][best_acc_idx]})")
+    report.append(f"   - 最高Recall: {data['recalls'][best_rec_idx]:.2f}% (Epoch {data['epochs'][best_rec_idx]})")
+    report.append(f"   - 最高F1-Score: {data['f1_scores'][best_f1_idx]:.2f}% (Epoch {data['epochs'][best_f1_idx]})")
+    report.append("")
+    
+    # 混淆矩阵
+    tp, fp, fn, tn = data['tps'][-1], data['fps'][-1], data['fns'][-1], data['tns'][-1]
+    report.append(f"🎯 最终混淆矩阵:")
+    report.append(f"   - True Positive (TP): {tp}")
+    report.append(f"   - True Negative (TN): {tn}")
+    report.append(f"   - False Positive (FP): {fp}")
+    report.append(f"   - False Negative (FN): {fn}")
+    report.append(f"   - Total Samples: {tp + tn + fp + fn}")
+    report.append("")
+    
+    # 误报率和漏检率
+    fpr = fp / (fp + tn) * 100 if (fp + tn) > 0 else 0
+    fnr = fn / (fn + tp) * 100 if (fn + tp) > 0 else 0
+    report.append(f"⚠️ 错误分析:")
+    report.append(f"   - False Positive Rate (FPR): {fpr:.2f}%")
+    report.append(f"   - False Negative Rate (FNR): {fnr:.2f}%")
+    report.append("")
+    
+    report.append("=" * 80)
+    
+    report_text = "\n".join(report)
+    
+    # 保存到文件
+    with open(output_dir / 'training_statistics.txt', 'w', encoding='utf-8') as f:
+        f.write(report_text)
+    
+    print(report_text)
+    print(f"\n✅ 统计报告已保存: {output_dir / 'training_statistics.txt'}")
 
-
-def create_visualization_grid(vis_dir='visualizations', output_path='visualizations/results_grid.png'):
-    """
-    创建可视化网格 - 展示多个epoch的异常热力图
-    """
-    vis_dir = Path(vis_dir)
-    output_path = Path(output_path)
+if __name__ == "__main__":
+    log_file = "scene_level_training.log"
+    output_dir = "training_visualizations"
     
-    # 查找所有热力图
-    heatmap_files = sorted(vis_dir.glob('heatmap_epoch_*.png'))
+    print("🚀 开始解析训练日志...")
+    data = parse_training_log(log_file)
     
-    if not heatmap_files:
-        print(f"⚠️ 未找到热力图文件")
-        return
-    
-    # 选择几个关键epoch显示
-    num_display = min(9, len(heatmap_files))
-    indices = np.linspace(0, len(heatmap_files)-1, num_display, dtype=int)
-    selected_files = [heatmap_files[i] for i in indices]
-    
-    # 创建网格
-    rows = int(np.ceil(np.sqrt(num_display)))
-    cols = int(np.ceil(num_display / rows))
-    
-    fig, axes = plt.subplots(rows, cols, figsize=(cols*4, rows*4))
-    fig.suptitle('Anomaly Detection Progress Across Epochs', fontsize=16, fontweight='bold')
-    
-    if rows == 1 and cols == 1:
-        axes = np.array([[axes]])
-    elif rows == 1 or cols == 1:
-        axes = axes.reshape(rows, cols)
-    
-    for idx, (ax, img_path) in enumerate(zip(axes.flat, selected_files)):
-        # 读取图像
-        img = plt.imread(img_path)
-        ax.imshow(img)
-        
-        # 从文件名提取epoch
-        epoch = int(img_path.stem.split('_')[-1])
-        ax.set_title(f'Epoch {epoch}', fontsize=12)
-        ax.axis('off')
-    
-    # 隐藏多余的子图
-    for idx in range(len(selected_files), rows * cols):
-        axes.flat[idx].axis('off')
-    
-    plt.tight_layout()
-    plt.savefig(output_path, dpi=150, bbox_inches='tight')
-    print(f"✅ 可视化网格保存至: {output_path}")
-    plt.close()
-
-
-def monitor_training(log_dir='lightning_logs', interval=60):
-    """
-    持续监控训练进度
-    
-    Args:
-        log_dir: TensorBoard日志目录
-        interval: 更新间隔（秒）
-    """
-    print("=" * 60)
-    print("🔍 开始监控训练进度")
-    print(f"📁 日志目录: {log_dir}")
-    print(f"⏰ 更新间隔: {interval}秒")
-    print("=" * 60)
-    print("\n💡 按 Ctrl+C 停止监控\n")
-    
-    try:
-        while True:
-            # 查找最新的版本目录
-            log_path = Path(log_dir) / 'anovox_anomaly'
-            if not log_path.exists():
-                print(f"⚠️ 等待训练开始... ({log_path})")
-                time.sleep(interval)
-                continue
-            
-            # 获取最新版本
-            versions = sorted([d for d in log_path.iterdir() if d.is_dir() and d.name.startswith('version_')])
-            if not versions:
-                print(f"⚠️ 等待训练开始...")
-                time.sleep(interval)
-                continue
-            
-            latest_version = versions[-1]
-            
-            # 更新可视化
-            print(f"\n🔄 更新可视化... ({time.strftime('%H:%M:%S')})")
-            plot_training_curves(latest_version)
-            create_visualization_grid()
-            
-            time.sleep(interval)
-            
-    except KeyboardInterrupt:
-        print("\n\n⚠️ 监控已停止")
-
-
-def main():
-    parser = argparse.ArgumentParser(description='Visualize Training Progress')
-    parser.add_argument('--log-dir', type=str, default='lightning_logs',
-                       help='TensorBoard log directory')
-    parser.add_argument('--monitor', action='store_true',
-                       help='Continuously monitor training')
-    parser.add_argument('--interval', type=int, default=60,
-                       help='Update interval in seconds (for monitor mode)')
-    
-    args = parser.parse_args()
-    
-    if args.monitor:
-        # 持续监控模式
-        monitor_training(args.log_dir, args.interval)
+    if len(data['epochs']) == 0:
+        print("❌ 未找到训练数据，请检查日志文件格式")
     else:
-        # 单次可视化模式
-        log_path = Path(args.log_dir) / 'anovox_anomaly'
-        if log_path.exists():
-            versions = sorted([d for d in log_path.iterdir() if d.is_dir() and d.name.startswith('version_')])
-            if versions:
-                latest_version = versions[-1]
-                print(f"📊 生成可视化: {latest_version}")
-                plot_training_curves(latest_version)
-                create_visualization_grid()
-            else:
-                print(f"⚠️ 未找到训练版本")
-        else:
-            print(f"⚠️ 日志目录不存在: {log_path}")
-
-
-if __name__ == '__main__':
-    main()
-
+        print(f"✅ 成功解析 {len(data['epochs'])} 个epoch的数据\n")
+        
+        print("📊 生成可视化图表...")
+        plot_training_curves(data, output_dir)
+        
+        print("\n📄 生成统计报告...")
+        generate_statistics_report(data, output_dir)
+        
+        print(f"\n🎉 所有可视化完成！输出目录: {output_dir}/")

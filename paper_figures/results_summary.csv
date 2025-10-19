@@ -1,0 +1,4 @@
+Dataset Split,Samples,Normal/Anomaly,Accuracy (%),Recall (%),FPR (%)
+Training,4320,960/3360,-,-,-
+Validation,1080,240/840,99.78,99.74,0.08
+Test,4200,0/4200,100.0,100.0,0.0
