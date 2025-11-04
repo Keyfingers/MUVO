@@ -1,309 +1,637 @@
-#!/usr/bin/env python3
 """
-消融实验脚本 - 对比不同位置编码和对齐方法的效果
-Ablation Study Script - Compare Different Positional Encoding and Alignment Methods
+🔬 消融实验训练脚本
 
-这个脚本实现了您建议的消融实验，对比：
-1. 无位置编码 vs 有位置编码
-2. 固定位置编码 vs 可学习位置编码 vs 混合位置编码
-3. 不同特征对齐方法的效果
+支持5种消融配置：
+1. image_only    - 仅图像分支
+2. lidar_only    - 仅点云分支  
+3. late_fusion   - 后期融合
+4. dynamic_only  - 仅异常数据训练
+5. lightweight   - 轻量级模型
+
+用法:
+    python ablation_study.py --experiment image_only --epochs 20
 """
 
-import argparse
-import torch
-import numpy as np
-import json
 import os
+import sys
+import torch
+import torch.nn as nn
+import torch.nn.functional as F
+from torch.utils.data import DataLoader
+from tqdm import tqdm
+import numpy as np
+from pathlib import Path
+import argparse
+import json
 from datetime import datetime
-from muvo.config import get_cfg
-from muvo.models.mile_anomaly import MileAnomalyDetection
-from muvo.data.dataset import DataModule
-from muvo.trainer import Trainer
+
+sys.path.insert(0, str(Path(__file__).parent))
+from muvo.config import _C
+from muvo.dataset.anovox_dataset import AnoVoxDataset, collate_fn
 
 
-class AblationStudy:
+# ============================================================================
+# 模型定义
+# ============================================================================
+
+class ImageOnlyDetector(nn.Module):
+    """消融实验1: 仅图像分支"""
+    
+    def __init__(self, cfg):
+        super().__init__()
+        self.cfg = cfg
+        
+        # 图像编码器（与完整模型相同）
+        self.image_encoder = nn.Sequential(
+            nn.Conv2d(3, 64, 7, stride=2, padding=3),
+            nn.BatchNorm2d(64),
+            nn.ReLU(inplace=True),
+            nn.MaxPool2d(3, stride=2, padding=1),
+            self._make_layer(64, 128, 2),
+            self._make_layer(128, 256, 2),
+            self._make_layer(256, 512, 2),
+            nn.AdaptiveAvgPool2d((1, 1))
+        )
+        
+        # 分类器（仅512维输入）
+        self.classifier = nn.Sequential(
+            nn.Linear(512, 256),
+            nn.ReLU(inplace=True),
+            nn.Dropout(0.5),
+            nn.Linear(256, 128),
+            nn.ReLU(inplace=True),
+            nn.Dropout(0.3),
+            nn.Linear(128, 1)
+        )
+        self._initialize_weights()
+    
+    def _make_layer(self, in_channels, out_channels, stride):
+        return nn.Sequential(
+            nn.Conv2d(in_channels, out_channels, 3, stride=stride, padding=1),
+            nn.BatchNorm2d(out_channels),
+            nn.ReLU(inplace=True),
+            nn.Conv2d(out_channels, out_channels, 3, stride=1, padding=1),
+            nn.BatchNorm2d(out_channels),
+            nn.ReLU(inplace=True)
+        )
+    
+    def _initialize_weights(self):
+        for m in self.modules():
+            if isinstance(m, nn.Conv2d):
+                nn.init.kaiming_normal_(m.weight, mode='fan_out', nonlinearity='relu')
+            elif isinstance(m, nn.BatchNorm2d):
+                nn.init.constant_(m.weight, 1)
+                nn.init.constant_(m.bias, 0)
+            elif isinstance(m, nn.Linear):
+                nn.init.normal_(m.weight, 0, 0.01)
+                nn.init.constant_(m.bias, 0)
+    
+    def forward(self, batch):
+        image = batch['image']
+        B = image.shape[0]
+        
+        img_feat = self.image_encoder(image).view(B, -1)
+        logit = self.classifier(img_feat)
+        prob = torch.sigmoid(logit)
+        
+        return {'scene_logit': logit, 'scene_prob': prob}
+
+
+class LiDAROnlyDetector(nn.Module):
+    """消融实验2: 仅点云分支"""
+    
+    def __init__(self, cfg):
+        super().__init__()
+        self.cfg = cfg
+        
+        # 点云编码器（与完整模型相同）
+        self.point_encoder = nn.Sequential(
+            nn.Conv1d(4, 64, 1),
+            nn.BatchNorm1d(64),
+            nn.ReLU(inplace=True),
+            nn.Conv1d(64, 128, 1),
+            nn.BatchNorm1d(128),
+            nn.ReLU(inplace=True),
+            nn.Conv1d(128, 256, 1),
+            nn.BatchNorm1d(256),
+            nn.ReLU(inplace=True),
+            nn.Conv1d(256, 512, 1),
+            nn.BatchNorm1d(512),
+            nn.ReLU(inplace=True),
+        )
+        
+        # 分类器（仅512维输入）
+        self.classifier = nn.Sequential(
+            nn.Linear(512, 256),
+            nn.ReLU(inplace=True),
+            nn.Dropout(0.5),
+            nn.Linear(256, 128),
+            nn.ReLU(inplace=True),
+            nn.Dropout(0.3),
+            nn.Linear(128, 1)
+        )
+        self._initialize_weights()
+    
+    def _initialize_weights(self):
+        for m in self.modules():
+            if isinstance(m, nn.Conv1d):
+                nn.init.kaiming_normal_(m.weight, mode='fan_out', nonlinearity='relu')
+            elif isinstance(m, nn.BatchNorm1d):
+                nn.init.constant_(m.weight, 1)
+                nn.init.constant_(m.bias, 0)
+            elif isinstance(m, nn.Linear):
+                nn.init.normal_(m.weight, 0, 0.01)
+                nn.init.constant_(m.bias, 0)
+    
+    def forward(self, batch):
+        points = batch['points']
+        B = points.shape[0]
+        
+        points_t = points.permute(0, 2, 1)
+        point_feat = torch.max(self.point_encoder(points_t), 2)[0]
+        logit = self.classifier(point_feat)
+        prob = torch.sigmoid(logit)
+        
+        return {'scene_logit': logit, 'scene_prob': prob}
+
+
+class LateFusionDetector(nn.Module):
+    """消融实验3: 后期融合（两个独立分类器的平均）"""
+    
+    def __init__(self, cfg):
+        super().__init__()
+        self.cfg = cfg
+        
+        # 图像分支
+        self.image_encoder = nn.Sequential(
+            nn.Conv2d(3, 64, 7, stride=2, padding=3),
+            nn.BatchNorm2d(64),
+            nn.ReLU(inplace=True),
+            nn.MaxPool2d(3, stride=2, padding=1),
+            self._make_layer(64, 128, 2),
+            self._make_layer(128, 256, 2),
+            self._make_layer(256, 512, 2),
+            nn.AdaptiveAvgPool2d((1, 1))
+        )
+        
+        # 点云分支
+        self.point_encoder = nn.Sequential(
+            nn.Conv1d(4, 64, 1),
+            nn.BatchNorm1d(64),
+            nn.ReLU(inplace=True),
+            nn.Conv1d(64, 128, 1),
+            nn.BatchNorm1d(128),
+            nn.ReLU(inplace=True),
+            nn.Conv1d(128, 256, 1),
+            nn.BatchNorm1d(256),
+            nn.ReLU(inplace=True),
+            nn.Conv1d(256, 512, 1),
+            nn.BatchNorm1d(512),
+            nn.ReLU(inplace=True),
+        )
+        
+        # 两个独立的分类器
+        self.image_classifier = nn.Sequential(
+            nn.Linear(512, 256),
+            nn.ReLU(inplace=True),
+            nn.Dropout(0.5),
+            nn.Linear(256, 1)
+        )
+        
+        self.point_classifier = nn.Sequential(
+            nn.Linear(512, 256),
+            nn.ReLU(inplace=True),
+            nn.Dropout(0.5),
+            nn.Linear(256, 1)
+        )
+        
+        self._initialize_weights()
+    
+    def _make_layer(self, in_channels, out_channels, stride):
+        return nn.Sequential(
+            nn.Conv2d(in_channels, out_channels, 3, stride=stride, padding=1),
+            nn.BatchNorm2d(out_channels),
+            nn.ReLU(inplace=True),
+            nn.Conv2d(out_channels, out_channels, 3, stride=1, padding=1),
+            nn.BatchNorm2d(out_channels),
+            nn.ReLU(inplace=True)
+        )
+    
+    def _initialize_weights(self):
+        for m in self.modules():
+            if isinstance(m, (nn.Conv2d, nn.Conv1d)):
+                nn.init.kaiming_normal_(m.weight, mode='fan_out', nonlinearity='relu')
+            elif isinstance(m, (nn.BatchNorm2d, nn.BatchNorm1d)):
+                nn.init.constant_(m.weight, 1)
+                nn.init.constant_(m.bias, 0)
+            elif isinstance(m, nn.Linear):
+                nn.init.normal_(m.weight, 0, 0.01)
+                nn.init.constant_(m.bias, 0)
+    
+    def forward(self, batch):
+        image = batch['image']
+        points = batch['points']
+        B = image.shape[0]
+        
+        # 图像分支预测
+        img_feat = self.image_encoder(image).view(B, -1)
+        img_logit = self.image_classifier(img_feat)
+        
+        # 点云分支预测
+        points_t = points.permute(0, 2, 1)
+        point_feat = torch.max(self.point_encoder(points_t), 2)[0]
+        point_logit = self.point_classifier(point_feat)
+        
+        # 后期融合：平均两个预测
+        fused_logit = (img_logit + point_logit) / 2.0
+        fused_prob = torch.sigmoid(fused_logit)
+        
+        return {'scene_logit': fused_logit, 'scene_prob': fused_prob}
+
+
+class LightweightDetector(nn.Module):
+    """消融实验5: 轻量级模型（通道数减半）"""
+    
+    def __init__(self, cfg):
+        super().__init__()
+        self.cfg = cfg
+        
+        # 轻量级图像编码器
+        self.image_encoder = nn.Sequential(
+            nn.Conv2d(3, 32, 7, stride=2, padding=3),
+            nn.BatchNorm2d(32),
+            nn.ReLU(inplace=True),
+            nn.MaxPool2d(3, stride=2, padding=1),
+            self._make_layer(32, 64, 2),
+            self._make_layer(64, 128, 2),
+            self._make_layer(128, 256, 2),
+            nn.AdaptiveAvgPool2d((1, 1))
+        )
+        
+        # 轻量级点云编码器
+        self.point_encoder = nn.Sequential(
+            nn.Conv1d(4, 32, 1),
+            nn.BatchNorm1d(32),
+            nn.ReLU(inplace=True),
+            nn.Conv1d(32, 64, 1),
+            nn.BatchNorm1d(64),
+            nn.ReLU(inplace=True),
+            nn.Conv1d(64, 128, 1),
+            nn.BatchNorm1d(128),
+            nn.ReLU(inplace=True),
+            nn.Conv1d(128, 256, 1),
+            nn.BatchNorm1d(256),
+            nn.ReLU(inplace=True),
+        )
+        
+        # 轻量级分类器
+        self.classifier = nn.Sequential(
+            nn.Linear(256 + 256, 256),
+            nn.ReLU(inplace=True),
+            nn.Dropout(0.3),
+            nn.Linear(256, 128),
+            nn.ReLU(inplace=True),
+            nn.Linear(128, 1)
+        )
+        self._initialize_weights()
+    
+    def _make_layer(self, in_channels, out_channels, stride):
+        return nn.Sequential(
+            nn.Conv2d(in_channels, out_channels, 3, stride=stride, padding=1),
+            nn.BatchNorm2d(out_channels),
+            nn.ReLU(inplace=True),
+            nn.Conv2d(out_channels, out_channels, 3, stride=1, padding=1),
+            nn.BatchNorm2d(out_channels),
+            nn.ReLU(inplace=True)
+        )
+    
+    def _initialize_weights(self):
+        for m in self.modules():
+            if isinstance(m, (nn.Conv2d, nn.Conv1d)):
+                nn.init.kaiming_normal_(m.weight, mode='fan_out', nonlinearity='relu')
+            elif isinstance(m, (nn.BatchNorm2d, nn.BatchNorm1d)):
+                nn.init.constant_(m.weight, 1)
+                nn.init.constant_(m.bias, 0)
+            elif isinstance(m, nn.Linear):
+                nn.init.normal_(m.weight, 0, 0.01)
+                nn.init.constant_(m.bias, 0)
+    
+    def forward(self, batch):
+        image = batch['image']
+        points = batch['points']
+        B = image.shape[0]
+        
+        img_feat = self.image_encoder(image).view(B, -1)
+        points_t = points.permute(0, 2, 1)
+        point_feat = torch.max(self.point_encoder(points_t), 2)[0]
+        
+        fused_feat = torch.cat([img_feat, point_feat], dim=1)
+        logit = self.classifier(fused_feat)
+        prob = torch.sigmoid(logit)
+        
+        return {'scene_logit': logit, 'scene_prob': prob}
+
+
+# ============================================================================
+# 辅助函数
+# ============================================================================
+
+def extract_scene_labels(batch):
+    """从batch中提取场景级标签"""
+    anomaly_labels = batch.get('anomaly_label', [])
+    labels = []
+    for label_dict in anomaly_labels:
+        if isinstance(label_dict, dict):
+            anomaly_is_alive = label_dict.get('anomaly_is_alive', 'False')
+            if isinstance(anomaly_is_alive, str):
+                has_anomaly = (anomaly_is_alive.lower() == 'true')
+            else:
+                has_anomaly = bool(anomaly_is_alive)
+            labels.append(1.0 if has_anomaly else 0.0)
+        else:
+            labels.append(0.0)
+    return torch.tensor(labels, dtype=torch.float32)
+
+
+def calculate_metrics(preds, labels):
+    """计算分类指标"""
+    tp = ((preds == 1) & (labels == 1)).sum().item()
+    tn = ((preds == 0) & (labels == 0)).sum().item()
+    fp = ((preds == 1) & (labels == 0)).sum().item()
+    fn = ((preds == 0) & (labels == 1)).sum().item()
+    
+    accuracy = (tp + tn) / (tp + tn + fp + fn + 1e-8)
+    precision = tp / (tp + fp + 1e-8)
+    recall = tp / (tp + fn + 1e-8)
+    f1 = 2 * precision * recall / (precision + recall + 1e-8)
+    
+    return {
+        'accuracy': accuracy,
+        'precision': precision,
+        'recall': recall,
+        'f1': f1,
+        'tp': tp, 'tn': tn, 'fp': fp, 'fn': fn
+    }
+
+
+def count_parameters(model):
+    """统计模型参数量"""
+    return sum(p.numel() for p in model.parameters() if p.requires_grad)
+
+
+# ============================================================================
+# 训练函数
+# ============================================================================
+
+def train_ablation(experiment_name, epochs=20, batch_size=8, lr=1e-4):
     """
-    消融实验类
+    运行消融实验
+    
+    Args:
+        experiment_name: 实验名称 (image_only, lidar_only, late_fusion, dynamic_only, lightweight)
+        epochs: 训练轮数
+        batch_size: 批次大小
+        lr: 学习率
     """
     
-    def __init__(self, base_config_path: str, output_dir: str = 'ablation_results'):
-        self.base_config_path = base_config_path
-        self.output_dir = output_dir
-        self.results = {}
-        
-        # 创建输出目录
-        os.makedirs(output_dir, exist_ok=True)
-        
-        # 定义实验配置
-        self.experiments = {
-            # 位置编码消融实验
-            'no_pe': {
-                'name': 'No Positional Encoding',
-                'config': {
-                    'MODEL.ANOMALY_DETECTION.POSITIONAL_ENCODING.ENABLED': False
-                }
-            },
-            'sincos_pe': {
-                'name': 'Sincosoidal Positional Encoding',
-                'config': {
-                    'MODEL.ANOMALY_DETECTION.POSITIONAL_ENCODING.ENABLED': True,
-                    'MODEL.ANOMALY_DETECTION.POSITIONAL_ENCODING.TYPE': 'sincos'
-                }
-            },
-            'learned_pe': {
-                'name': 'Learned Positional Encoding',
-                'config': {
-                    'MODEL.ANOMALY_DETECTION.POSITIONAL_ENCODING.ENABLED': True,
-                    'MODEL.ANOMALY_DETECTION.POSITIONAL_ENCODING.TYPE': 'learned'
-                }
-            },
-            'hybrid_pe': {
-                'name': 'Hybrid Positional Encoding',
-                'config': {
-                    'MODEL.ANOMALY_DETECTION.POSITIONAL_ENCODING.ENABLED': True,
-                    'MODEL.ANOMALY_DETECTION.POSITIONAL_ENCODING.TYPE': 'hybrid'
-                }
-            },
-            
-            # 特征对齐消融实验
-            'nearest_alignment': {
-                'name': 'Nearest Neighbor Alignment',
-                'config': {
-                    'MODEL.ANOMALY_DETECTION.FEATURE_ALIGNMENT.METHOD': 'nearest',
-                    'MODEL.ANOMALY_DETECTION.FEATURE_ALIGNMENT.USE_ALIGNMENT_NETWORK': False
-                }
-            },
-            'bilinear_alignment': {
-                'name': 'Bilinear Alignment',
-                'config': {
-                    'MODEL.ANOMALY_DETECTION.FEATURE_ALIGNMENT.METHOD': 'bilinear',
-                    'MODEL.ANOMALY_DETECTION.FEATURE_ALIGNMENT.USE_ALIGNMENT_NETWORK': False
-                }
-            },
-            'network_alignment': {
-                'name': 'Network Alignment',
-                'config': {
-                    'MODEL.ANOMALY_DETECTION.FEATURE_ALIGNMENT.METHOD': 'network',
-                    'MODEL.ANOMALY_DETECTION.FEATURE_ALIGNMENT.USE_ALIGNMENT_NETWORK': True
-                }
-            },
-            
-            # 组合实验
-            'best_combination': {
-                'name': 'Best Combination (Hybrid PE + Network Alignment)',
-                'config': {
-                    'MODEL.ANOMALY_DETECTION.POSITIONAL_ENCODING.ENABLED': True,
-                    'MODEL.ANOMALY_DETECTION.POSITIONAL_ENCODING.TYPE': 'hybrid',
-                    'MODEL.ANOMALY_DETECTION.FEATURE_ALIGNMENT.METHOD': 'network',
-                    'MODEL.ANOMALY_DETECTION.FEATURE_ALIGNMENT.USE_ALIGNMENT_NETWORK': True
-                }
-            }
-        }
+    # 设置随机种子
+    torch.manual_seed(42)
+    np.random.seed(42)
     
-    def run_experiment(self, experiment_id: str, max_epochs: int = 10):
-        """
-        运行单个实验
-        """
-        print(f"\n{'='*60}")
-        print(f"🧪 运行实验: {self.experiments[experiment_id]['name']}")
-        print(f"🧪 Running Experiment: {self.experiments[experiment_id]['name']}")
-        print(f"{'='*60}")
-        
-        # 加载基础配置
-        cfg = get_cfg()
-        cfg.merge_from_file(self.base_config_path)
-        
-        # 应用实验特定配置
-        experiment_config = self.experiments[experiment_id]['config']
-        for key, value in experiment_config.items():
-            keys = key.split('.')
-            current = cfg
-            for k in keys[:-1]:
-                current = getattr(current, k)
-            setattr(current, keys[-1], value)
-        
-        # 设置实验特定的输出目录
-        experiment_output_dir = os.path.join(self.output_dir, experiment_id)
-        cfg.LOG_DIR = experiment_output_dir
-        cfg.TAG = f'ablation_{experiment_id}'
-        
-        try:
-            # 创建数据模块
-            data_module = DataModule(cfg)
-            
-            # 创建模型
-            model = MileAnomalyDetection(cfg)
-            
-            # 冻结骨干网络权重
-            if cfg.MODEL.ANOMALY_DETECTION.FREEZE_BACKBONE:
-                model.freeze_backbone_weights()
-            
-            # 创建训练器
-            trainer = Trainer(
-                model=model,
-                cfg=cfg,
-                data_module=data_module,
-                max_epochs=max_epochs
-            )
-            
-            # 训练模型
-            trainer.fit()
-            
-            # 评估模型
-            results = self.evaluate_model(model, data_module, cfg)
-            
-            # 保存结果
-            self.results[experiment_id] = {
-                'name': self.experiments[experiment_id]['name'],
-                'config': experiment_config,
-                'results': results,
-                'timestamp': datetime.now().isoformat()
-            }
-            
-            print(f"✅ 实验 {experiment_id} 完成!")
-            print(f"✅ Experiment {experiment_id} completed!")
-            
-        except Exception as e:
-            print(f"❌ 实验 {experiment_id} 失败: {e}")
-            self.results[experiment_id] = {
-                'name': self.experiments[experiment_id]['name'],
-                'config': experiment_config,
-                'error': str(e),
-                'timestamp': datetime.now().isoformat()
-            }
+    # 创建输出目录
+    output_dir = Path(f'ablation_results/{experiment_name}')
+    output_dir.mkdir(parents=True, exist_ok=True)
     
-    def evaluate_model(self, model, data_module, cfg):
-        """
-        评估模型性能
-        """
+    device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+    cfg = _C.clone()
+    
+    print(f"\n{'='*80}")
+    print(f"🔬 消融实验: {experiment_name}")
+    print(f"{'='*80}\n")
+    
+    # 准备数据集
+    if experiment_name == 'dynamic_only':
+        # 仅使用异常数据
+        dataset_types_train = ['Dynamic_Mono_Town07']
+        dataset_types_val = ['Dynamic_Mono_Town07']
+    else:
+        # 使用混合数据
+        dataset_types_train = ['Dynamic_Mono_Town07', 'Normality_Mono_Town07']
+        dataset_types_val = ['Dynamic_Mono_Town07', 'Normality_Mono_Town07']
+    
+    train_dataset = AnoVoxDataset(
+        data_root='/root/autodl-tmp/datasets/AnoVox',
+        split='train',
+        dataset_types=dataset_types_train,
+        train_ratio=0.8,
+        load_voxel=False
+    )
+    
+    val_dataset = AnoVoxDataset(
+        data_root='/root/autodl-tmp/datasets/AnoVox',
+        split='val',
+        dataset_types=dataset_types_val,
+        train_ratio=0.8,
+        load_voxel=False
+    )
+    
+    train_loader = DataLoader(
+        train_dataset, batch_size=batch_size, shuffle=True,
+        num_workers=4, collate_fn=collate_fn
+    )
+    
+    val_loader = DataLoader(
+        val_dataset, batch_size=batch_size, shuffle=False,
+        num_workers=4, collate_fn=collate_fn
+    )
+    
+    # 创建模型
+    if experiment_name == 'image_only':
+        model = ImageOnlyDetector(cfg)
+    elif experiment_name == 'lidar_only':
+        model = LiDAROnlyDetector(cfg)
+    elif experiment_name == 'late_fusion':
+        model = LateFusionDetector(cfg)
+    elif experiment_name == 'dynamic_only':
+        # dynamic_only使用完整模型，但仅用异常数据训练
+        from train_scene_level_detection import SceneLevelAnomalyDetector
+        model = SceneLevelAnomalyDetector(cfg)
+    elif experiment_name == 'lightweight':
+        model = LightweightDetector(cfg)
+    else:
+        raise ValueError(f"Unknown experiment: {experiment_name}")
+    
+    model = model.to(device)
+    
+    # 统计参数量
+    n_params = count_parameters(model)
+    print(f"📊 模型参数量: {n_params:,} ({n_params/1e6:.2f}M)")
+    
+    # 统计数据分布
+    print(f"📂 训练集: {len(train_dataset)} 样本")
+    print(f"📂 验证集: {len(val_dataset)} 样本")
+    
+    # 统计标签分布（仅训练集前1000个样本）
+    anomaly_count = 0
+    for i in range(min(1000, len(train_dataset))):
+        sample = train_dataset[i]
+        label_dict = sample.get('anomaly_label', {})
+        if isinstance(label_dict, dict):
+            is_alive = label_dict.get('anomaly_is_alive', 'False')
+            if isinstance(is_alive, str) and is_alive.lower() == 'true':
+                anomaly_count += 1
+    print(f"📊 训练集标签分布 (前1000样本): {anomaly_count}/1000 = {anomaly_count/10:.1f}% 异常\n")
+    
+    # 定义损失函数和优化器
+    pos_weight = torch.tensor([3.5]).to(device)  # 77.8/22.2 ≈ 3.5
+    criterion = nn.BCEWithLogitsLoss(pos_weight=pos_weight)
+    optimizer = torch.optim.Adam(model.parameters(), lr=lr, weight_decay=1e-4)
+    
+    # 训练记录
+    history = {
+        'train_loss': [], 'val_loss': [],
+        'val_accuracy': [], 'val_precision': [], 'val_recall': [], 'val_f1': [],
+        'val_tp': [], 'val_tn': [], 'val_fp': [], 'val_fn': []
+    }
+    
+    best_recall = 0.0
+    
+    # 训练循环
+    for epoch in range(epochs):
+        # ========== 训练 ==========
+        model.train()
+        train_loss = 0.0
+        
+        pbar = tqdm(train_loader, desc=f'Epoch {epoch+1}/{epochs} [Train]')
+        for batch in pbar:
+            # 准备数据
+            for key in ['image', 'points']:
+                if key in batch:
+                    batch[key] = batch[key].to(device)
+            
+            labels = extract_scene_labels(batch).to(device)
+            
+            # 前向传播
+            output = model(batch)
+            logits = output['scene_logit'].squeeze()
+            
+            # 计算损失
+            loss = criterion(logits, labels)
+            
+            # 反向传播
+            optimizer.zero_grad()
+            loss.backward()
+            optimizer.step()
+            
+            train_loss += loss.item()
+            pbar.set_postfix({'loss': f'{loss.item():.4f}'})
+        
+        train_loss /= len(train_loader)
+        
+        # ========== 验证 ==========
         model.eval()
+        val_loss = 0.0
+        all_preds = []
+        all_labels = []
         
-        # 这里可以添加具体的评估指标
-        # 例如：准确率、F1分数、AUC等
-        results = {
-            'accuracy': 0.0,  # 占位符
-            'f1_score': 0.0,  # 占位符
-            'auc': 0.0,  # 占位符
-            'inference_time': 0.0,  # 占位符
-            'memory_usage': 0.0  # 占位符
-        }
-        
-        # 实际评估逻辑
         with torch.no_grad():
-            # 这里应该实现具体的评估逻辑
-            # 例如在验证集上测试模型性能
-            pass
+            for batch in tqdm(val_loader, desc=f'Epoch {epoch+1}/{epochs} [Val]'):
+                for key in ['image', 'points']:
+                    if key in batch:
+                        batch[key] = batch[key].to(device)
+                
+                labels = extract_scene_labels(batch).to(device)
+                
+                output = model(batch)
+                logits = output['scene_logit'].squeeze()
+                probs = output['scene_prob'].squeeze()
+                
+                loss = criterion(logits, labels)
+                val_loss += loss.item()
+                
+                preds = (probs > 0.5).float()
+                all_preds.extend(preds.cpu().numpy())
+                all_labels.extend(labels.cpu().numpy())
         
-        return results
+        val_loss /= len(val_loader)
+        
+        # 计算指标
+        all_preds = np.array(all_preds)
+        all_labels = np.array(all_labels)
+        metrics = calculate_metrics(all_preds, all_labels)
+        
+        # 记录历史
+        history['train_loss'].append(train_loss)
+        history['val_loss'].append(val_loss)
+        for key in ['accuracy', 'precision', 'recall', 'f1', 'tp', 'tn', 'fp', 'fn']:
+            history[f'val_{key}'].append(metrics[key])
+        
+        # 打印结果
+        print(f"\nEpoch {epoch+1}/{epochs}")
+        print(f"  Train Loss: {train_loss:.4f}")
+        print(f"  Val Loss:   {val_loss:.4f}")
+        print(f"  Accuracy:   {metrics['accuracy']:.4f}")
+        print(f"  Precision:  {metrics['precision']:.4f}")
+        print(f"  Recall:     {metrics['recall']:.4f}")
+        print(f"  F1-Score:   {metrics['f1']:.4f}")
+        print(f"  TP: {metrics['tp']}, TN: {metrics['tn']}, FP: {metrics['fp']}, FN: {metrics['fn']}\n")
+        
+        # 保存最佳模型
+        if metrics['recall'] > best_recall:
+            best_recall = metrics['recall']
+            torch.save({
+                'epoch': epoch,
+                'model_state_dict': model.state_dict(),
+                'metrics': metrics
+            }, output_dir / 'best_model.pth')
+            print(f"  ✅ 保存最佳模型 (Recall: {best_recall:.4f})")
     
-    def run_all_experiments(self, max_epochs: int = 10):
-        """
-        运行所有消融实验
-        """
-        print("🚀 开始消融实验")
-        print("🚀 Starting Ablation Study")
-        print(f"📊 实验数量: {len(self.experiments)}")
-        print(f"📊 Number of experiments: {len(self.experiments)}")
-        
-        for experiment_id in self.experiments.keys():
-            self.run_experiment(experiment_id, max_epochs)
-        
-        # 保存所有结果
-        self.save_results()
-        
-        # 生成报告
-        self.generate_report()
+    # 保存训练历史
+    np.savez(output_dir / 'history.npz', **history)
     
-    def save_results(self):
-        """
-        保存实验结果
-        """
-        results_file = os.path.join(self.output_dir, 'ablation_results.json')
-        with open(results_file, 'w', encoding='utf-8') as f:
-            json.dump(self.results, f, indent=2, ensure_ascii=False)
-        
-        print(f"📁 结果已保存到: {results_file}")
+    # 保存最终报告
+    final_metrics = {
+        'experiment': experiment_name,
+        'epochs': epochs,
+        'best_recall': best_recall,
+        'final_metrics': {k: float(v) for k, v in metrics.items()},
+        'n_parameters': n_params,
+        'train_samples': len(train_dataset),
+        'val_samples': len(val_dataset)
+    }
     
-    def generate_report(self):
-        """
-        生成消融实验报告
-        """
-        report_file = os.path.join(self.output_dir, 'ablation_report.md')
-        
-        with open(report_file, 'w', encoding='utf-8') as f:
-            f.write("# 消融实验报告 (Ablation Study Report)\n\n")
-            f.write(f"**实验时间**: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}\n\n")
-            
-            f.write("## 实验概述 (Experiment Overview)\n\n")
-            f.write("本消融实验对比了不同位置编码和特征对齐方法对异常检测性能的影响。\n\n")
-            
-            f.write("## 实验结果 (Experimental Results)\n\n")
-            
-            # 位置编码对比
-            f.write("### 位置编码对比 (Positional Encoding Comparison)\n\n")
-            f.write("| 方法 | 描述 | 准确率 | F1分数 | AUC |\n")
-            f.write("|------|------|--------|--------|-----|\n")
-            
-            pe_experiments = ['no_pe', 'sincos_pe', 'learned_pe', 'hybrid_pe']
-            for exp_id in pe_experiments:
-                if exp_id in self.results:
-                    result = self.results[exp_id]
-                    f.write(f"| {exp_id} | {result['name']} | {result['results']['accuracy']:.4f} | {result['results']['f1_score']:.4f} | {result['results']['auc']:.4f} |\n")
-            
-            f.write("\n### 特征对齐对比 (Feature Alignment Comparison)\n\n")
-            f.write("| 方法 | 描述 | 准确率 | F1分数 | AUC |\n")
-            f.write("|------|------|--------|--------|-----|\n")
-            
-            alignment_experiments = ['nearest_alignment', 'bilinear_alignment', 'network_alignment']
-            for exp_id in alignment_experiments:
-                if exp_id in self.results:
-                    result = self.results[exp_id]
-                    f.write(f"| {exp_id} | {result['name']} | {result['results']['accuracy']:.4f} | {result['results']['f1_score']:.4f} | {result['results']['auc']:.4f} |\n")
-            
-            f.write("\n## 结论 (Conclusions)\n\n")
-            f.write("1. **位置编码的重要性**: 实验证明了位置编码对异常检测性能的重要影响。\n")
-            f.write("2. **最佳位置编码方法**: 混合位置编码在大多数指标上表现最佳。\n")
-            f.write("3. **特征对齐优化**: 网络对齐方法相比简单插值方法有显著提升。\n")
-            f.write("4. **组合效果**: 最佳组合方法在综合性能上表现最优。\n\n")
-            
-            f.write("## 详细结果 (Detailed Results)\n\n")
-            for exp_id, result in self.results.items():
-                f.write(f"### {result['name']}\n\n")
-                f.write(f"**配置**: {result['config']}\n\n")
-                if 'error' in result:
-                    f.write(f"**错误**: {result['error']}\n\n")
-                else:
-                    f.write(f"**结果**: {result['results']}\n\n")
-        
-        print(f"📊 报告已生成: {report_file}")
+    with open(output_dir / 'report.json', 'w') as f:
+        json.dump(final_metrics, f, indent=2)
+    
+    print(f"\n{'='*80}")
+    print(f"✅ 实验完成: {experiment_name}")
+    print(f"   最佳 Recall: {best_recall:.4f}")
+    print(f"   结果保存至: {output_dir}")
+    print(f"{'='*80}\n")
 
+
+# ============================================================================
+# 主函数
+# ============================================================================
 
 def main():
-    parser = argparse.ArgumentParser(description='Run ablation study for anomaly detection model')
-    parser.add_argument('--config-file', default='muvo/configs/anomaly_detection.yml',
-                       help='path to base config file')
-    parser.add_argument('--output-dir', default='ablation_results',
-                       help='output directory for results')
-    parser.add_argument('--max-epochs', type=int, default=10,
-                       help='maximum number of epochs per experiment')
-    parser.add_argument('--experiment', type=str, default=None,
-                       help='run specific experiment only')
+    parser = argparse.ArgumentParser(description='消融实验训练脚本')
+    parser.add_argument('--experiment', type=str, required=True,
+                        choices=['image_only', 'lidar_only', 'late_fusion', 
+                                'dynamic_only', 'lightweight'],
+                        help='实验类型')
+    parser.add_argument('--epochs', type=int, default=20, help='训练轮数')
+    parser.add_argument('--batch_size', type=int, default=8, help='批次大小')
+    parser.add_argument('--lr', type=float, default=1e-4, help='学习率')
     
     args = parser.parse_args()
     
-    # 创建消融实验
-    ablation_study = AblationStudy(args.config_file, args.output_dir)
-    
-    if args.experiment:
-        # 运行特定实验
-        if args.experiment in ablation_study.experiments:
-            ablation_study.run_experiment(args.experiment, args.max_epochs)
-        else:
-            print(f"❌ 未知实验: {args.experiment}")
-            print(f"可用实验: {list(ablation_study.experiments.keys())}")
-    else:
-        # 运行所有实验
-        ablation_study.run_all_experiments(args.max_epochs)
+    train_ablation(
+        experiment_name=args.experiment,
+        epochs=args.epochs,
+        batch_size=args.batch_size,
+        lr=args.lr
+    )
 
 
 if __name__ == '__main__':
