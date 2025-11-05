@@ -147,8 +147,20 @@ class LiDAROnlyDetector(nn.Module):
         points = batch['points']
         B = points.shape[0]
         
-        points_t = points.permute(0, 2, 1)
-        point_feat = torch.max(self.point_encoder(points_t), 2)[0]
+        # 限制点云数量以避免内存溢出（点云可能非常大）
+        max_points = 16384  # 限制最多16384个点
+        N = points.shape[1]
+        
+        if N > max_points:
+            # 随机采样
+            indices = torch.randperm(N, device=points.device)[:max_points]
+            points = points[:, indices, :]
+        elif N < max_points:
+            # 如果点数不足，可以重复采样或填充（这里简单处理）
+            pass
+        
+        points_t = points.permute(0, 2, 1)  # [B, 4, N]
+        point_feat = torch.max(self.point_encoder(points_t), 2)[0]  # [B, 512]
         logit = self.classifier(point_feat)
         prob = torch.sigmoid(logit)
         
@@ -435,13 +447,19 @@ def train_ablation(experiment_name, epochs=20, batch_size=8, lr=1e-4):
         load_voxel=False
     )
     
+    # 为lidar_only使用更小的batch_size以避免内存溢出
+    effective_batch_size = batch_size
+    if experiment_name == 'lidar_only':
+        effective_batch_size = min(batch_size, 4)  # lidar_only最多使用batch_size=4
+        print(f"⚠️  lidar_only实验：使用batch_size={effective_batch_size}以避免内存溢出")
+    
     train_loader = DataLoader(
-        train_dataset, batch_size=batch_size, shuffle=True,
+        train_dataset, batch_size=effective_batch_size, shuffle=True,
         num_workers=4, collate_fn=collate_fn
     )
     
     val_loader = DataLoader(
-        val_dataset, batch_size=batch_size, shuffle=False,
+        val_dataset, batch_size=effective_batch_size, shuffle=False,
         num_workers=4, collate_fn=collate_fn
     )
     
@@ -471,16 +489,26 @@ def train_ablation(experiment_name, epochs=20, batch_size=8, lr=1e-4):
     print(f"📂 训练集: {len(train_dataset)} 样本")
     print(f"📂 验证集: {len(val_dataset)} 样本")
     
-    # 统计标签分布（仅训练集前1000个样本）
+    # 统计标签分布（随机采样1000个样本，确保混合）
+    import random
+    random.seed(42)
+    sample_indices = random.sample(range(len(train_dataset)), min(1000, len(train_dataset)))
     anomaly_count = 0
-    for i in range(min(1000, len(train_dataset))):
+    normal_count = 0
+    for i in sample_indices:
         sample = train_dataset[i]
         label_dict = sample.get('anomaly_label', {})
         if isinstance(label_dict, dict):
             is_alive = label_dict.get('anomaly_is_alive', 'False')
-            if isinstance(is_alive, str) and is_alive.lower() == 'true':
+            if isinstance(is_alive, str):
+                has_anomaly = (is_alive.lower() == 'true')
+            else:
+                has_anomaly = bool(is_alive)
+            if has_anomaly:
                 anomaly_count += 1
-    print(f"📊 训练集标签分布 (前1000样本): {anomaly_count}/1000 = {anomaly_count/10:.1f}% 异常\n")
+            else:
+                normal_count += 1
+    print(f"📊 训练集标签分布 (随机1000样本): 异常={anomaly_count}, 正常={normal_count} ({anomaly_count/(anomaly_count+normal_count)*100:.1f}% 异常)\n")
     
     # 定义损失函数和优化器
     pos_weight = torch.tensor([3.5]).to(device)  # 77.8/22.2 ≈ 3.5

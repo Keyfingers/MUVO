@@ -27,7 +27,7 @@ echo "   5. Lightweight     (轻量级模型)"
 echo ""
 echo "⏱️  预计总时间: 3-4小时 (每个实验约30-40分钟)"
 echo ""
-read -p "按Enter键开始，或Ctrl+C取消: "
+echo "🚀 自动开始运行（无需确认）..."
 echo ""
 
 # 创建日志目录
@@ -68,7 +68,7 @@ echo ""
 python ablation_study.py \
     --experiment lidar_only \
     --epochs 20 \
-    --batch_size 8 \
+    --batch_size 4 \
     --lr 1e-4 \
     2>&1 | tee ablation_results/logs/lidar_only.log
 
@@ -183,5 +183,7 @@ echo "   1. 查看 ablation_results/comparison/analysis_report.txt"
 echo "   2. 使用生成的图表和表格撰写论文"
 echo ""
 echo "================================================================================"
+
+
 
 

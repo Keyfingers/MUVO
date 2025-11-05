@@ -1,0 +1,18 @@
+{
+  "experiment": "lightweight",
+  "epochs": 20,
+  "best_recall": 0.9837499999877031,
+  "final_metrics": {
+    "accuracy": 0.8209090909053596,
+    "precision": 0.8306188924946153,
+    "recall": 0.6374999999920312,
+    "f1": 0.7213578451470345,
+    "tp": 510.0,
+    "tn": 1296.0,
+    "fp": 104.0,
+    "fn": 290.0
+  },
+  "n_parameters": 1377633,
+  "train_samples": 8000,
+  "val_samples": 2200
+}

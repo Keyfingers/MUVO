@@ -1,0 +1,18 @@
+{
+  "experiment": "image_only",
+  "epochs": 20,
+  "best_recall": 0.9999999999875,
+  "final_metrics": {
+    "accuracy": 0.7931818181782129,
+    "precision": 0.7278731836099356,
+    "recall": 0.6887499999913906,
+    "f1": 0.7077713501649212,
+    "tp": 551.0,
+    "tn": 1194.0,
+    "fp": 206.0,
+    "fn": 249.0
+  },
+  "n_parameters": 4824193,
+  "train_samples": 8000,
+  "val_samples": 2200
+}

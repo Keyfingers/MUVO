@@ -82,9 +82,9 @@ class AnoVoxDataset(Dataset):
     
     def _scan_scenarios(self) -> List[Path]:
         """扫描数据集中的所有场景文件夹"""
-        scenarios = []
+        all_scenarios_by_type = {}
         
-        # 扫描指定的数据集类型目录
+        # 按数据集类型分别扫描场景
         for dataset_type in self.dataset_types:
             dataset_dir = self.data_root / f"AnoVox_{dataset_type}"
             if not dataset_dir.exists():
@@ -92,21 +92,36 @@ class AnoVoxDataset(Dataset):
                 continue
             
             # 扫描该类型下的所有场景
+            type_scenarios = []
             for scenario_dir in sorted(dataset_dir.glob("Scenario_*")):
                 if scenario_dir.is_dir():
-                    scenarios.append(scenario_dir)
+                    type_scenarios.append(scenario_dir)
+            all_scenarios_by_type[dataset_type] = type_scenarios
         
-        # 按train_ratio划分train/val
+        # 按train_ratio划分train/val，确保每个split都包含所有类型
         if self.split in ['train', 'val']:
-            # 对场景ID排序确保可重现性
-            scenarios = sorted(scenarios)
-            n_total = len(scenarios)
-            n_train = int(n_total * self.train_ratio)
+            train_scenarios = []
+            val_scenarios = []
             
+            for dataset_type, type_scenarios in all_scenarios_by_type.items():
+                # 对每个类型的场景排序确保可重现性
+                type_scenarios = sorted(type_scenarios)
+                n_total = len(type_scenarios)
+                n_train = int(n_total * self.train_ratio)
+                
+                train_scenarios.extend(type_scenarios[:n_train])
+                val_scenarios.extend(type_scenarios[n_train:])
+            
+            # 根据split返回对应的场景
             if self.split == 'train':
-                scenarios = scenarios[:n_train]
+                scenarios = train_scenarios
             elif self.split == 'val':
-                scenarios = scenarios[n_train:]
+                scenarios = val_scenarios
+        else:
+            # test集：合并所有场景
+            scenarios = []
+            for type_scenarios in all_scenarios_by_type.values():
+                scenarios.extend(type_scenarios)
         
         return scenarios
     
