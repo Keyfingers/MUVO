@@ -1,18 +1,18 @@
 {
   "experiment": "late_fusion",
   "epochs": 20,
-  "best_recall": 0.0,
+  "best_recall": 0.9812499999877343,
   "final_metrics": {
-    "accuracy": 0.7695454545419567,
-    "precision": 0.0,
-    "recall": 0.0,
-    "f1": 0.0,
-    "tp": 0.0,
-    "tn": 1693.0,
-    "fp": 507.0,
-    "fn": 0.0
+    "accuracy": 0.6140909090881178,
+    "precision": 0.4722536806288533,
+    "recall": 0.5212499999934844,
+    "f1": 0.4955436670205322,
+    "tp": 417.0,
+    "tn": 934.0,
+    "fp": 466.0,
+    "fn": 383.0
   },
-  "n_parameters": 5098178,
+  "n_parameters": 5098180,
   "train_samples": 8000,
   "val_samples": 2200
 }

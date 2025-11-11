@@ -217,6 +217,9 @@ class LateFusionDetector(nn.Module):
             nn.Linear(256, 1)
         )
         
+        # 可学习的融合权重（而不是简单平均）
+        self.fusion_weight = nn.Parameter(torch.tensor([0.5, 0.5]))  # [image_weight, point_weight]
+        
         self._initialize_weights()
     
     def _make_layer(self, in_channels, out_channels, stride):
@@ -254,8 +257,10 @@ class LateFusionDetector(nn.Module):
         point_feat = torch.max(self.point_encoder(points_t), 2)[0]
         point_logit = self.point_classifier(point_feat)
         
-        # 后期融合：平均两个预测
-        fused_logit = (img_logit + point_logit) / 2.0
+        # 后期融合：使用可学习的权重融合两个预测
+        # 使用softmax确保权重和为1
+        weights = torch.softmax(self.fusion_weight, dim=0)
+        fused_logit = weights[0] * img_logit + weights[1] * point_logit
         fused_prob = torch.sigmoid(fused_logit)
         
         return {'scene_logit': fused_logit, 'scene_prob': fused_prob}
